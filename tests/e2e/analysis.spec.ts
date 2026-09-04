@@ -56,7 +56,7 @@ test("analysis requires access and trusted origins; bodies cannot supply authori
 test("valid analysis saves originals, first revision and provenance once, with immutable database snapshots", async ({ request }) => {
   const { auth, requestId, projectId } = await setup(request); const key = randomUUID();
   const first = await analyze(request, requestId, auth, key); expect(first.status()).toBe(200); const saved = (await first.json()).estimate;
-  expect(saved).toMatchObject({ projectId, requestId, currentRevision: 1, status: "REVIEW_REQUIRED", overallClassification: "modifies_existing", provenance: { provider: "openai-compatible", model: "test-only-provider", promptVersion: "scope-v3" } });
+  expect(saved).toMatchObject({ projectId, requestId, currentRevision: 1, status: "REVIEW_REQUIRED", overallClassification: "modifies_existing", provenance: { provider: "openai-compatible", model: "test-only-provider", promptVersion: "scope-v4" } });
   expect(saved.revisions).toHaveLength(1); expect(saved.analysis.tasks[0].sourceEvidence[0].quote).toBe(saved.sources[0].text);
   const again = await analyze(request, requestId, auth, key); expect((await again.json()).estimate).toEqual(saved);
   const freshKey = await analyze(request, requestId, auth); expect((await freshKey.json()).estimate.id).toBe(saved.id);

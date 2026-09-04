@@ -7,7 +7,7 @@ const enabled = process.env.SCOPEFREE_LIVE_EVAL === "true";
 const observations: unknown[] = [];
 function saveObservations() {
   mkdirSync('.local/evaluation', { recursive: true });
-  writeFileSync('.local/evaluation/milestone-3-live.json', JSON.stringify({ at: new Date().toISOString(), provider: process.env.AI_PROVIDER, model: process.env.AI_MODEL, promptVersion: SCOPE_PROMPT_VERSION, thinking: process.env.AI_THINKING ?? 'default', reasoningEffort: process.env.AI_REASONING_EFFORT ?? 'default', maxOutputTokens: Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 6000), requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 30000), results: observations }, null, 2));
+  writeFileSync('.local/evaluation/milestone-3-live.json', JSON.stringify({ at: new Date().toISOString(), provider: process.env.AI_PROVIDER, model: process.env.AI_MODEL, promptVersion: SCOPE_PROMPT_VERSION, thinking: process.env.AI_THINKING ?? 'default', reasoningEffort: process.env.AI_REASONING_EFFORT ?? 'default', temperature: process.env.AI_TEMPERATURE ?? 'default', maxOutputTokens: Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 6000), requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 30000), results: observations }, null, 2));
 }
 describe.skipIf(!enabled)("live scope evaluation - real provider, no prescribed effort values", () => {
   afterAll(saveObservations);

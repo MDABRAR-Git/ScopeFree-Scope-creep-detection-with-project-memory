@@ -231,6 +231,482 @@
           "repaired": false
         }
       ]
+    },
+    {
+      "at": "2026-09-04T11:53:44.391Z",
+      "provider": "featherless",
+      "model": "Qwen/Qwen3.8-27B",
+      "promptVersion": "scope-v3",
+      "thinking": "false",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 2048,
+      "requestTimeoutMs": 90000,
+      "results": [
+        {
+          "id": "01-contact",
+          "elapsedMs": 21259,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "02-responsive",
+          "elapsedMs": 36939,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "03-gallery",
+          "elapsedMs": 26057,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "04-revision",
+          "elapsedMs": 36041,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "05-defect",
+          "elapsedMs": 27280,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "06-login",
+          "elapsedMs": 38490,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "07-payment",
+          "elapsedMs": 20207,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "08-booking",
+          "elapsedMs": 24968,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "09-language",
+          "elapsedMs": 49416,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "10-filter",
+          "elapsedMs": 23694,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "11-search",
+          "elapsedMs": 20853,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "12-dashboard",
+          "elapsedMs": 25160,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "13-pages",
+          "elapsedMs": 87981,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "14-images",
+          "elapsedMs": 31192,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "15-revisions",
+          "elapsedMs": 24715,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "16-inboxes",
+          "elapsedMs": 24277,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "17-vague",
+          "elapsedMs": 27579,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "18-integrate",
+          "elapsedMs": 23622,
+          "categoriesMatch": false,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "19-unclear-bug",
+          "elapsedMs": 44189,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "20-mixed",
+          "elapsedMs": 59458,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "21-injection",
+          "elapsedMs": 26141,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "22-absent",
+          "elapsedMs": 43302,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "23-amendment",
+          "elapsedMs": 20142,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "24-superseded",
+          "elapsedMs": 38323,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        },
+        {
+          "id": "25-ambiguous-baseline",
+          "elapsedMs": 24464,
+          "categoriesMatch": false,
+          "evidenceMatch": true,
+          "repaired": false,
+          "model": "Qwen/Qwen3.8-27B",
+          "provider": "featherless"
+        }
+      ],
+      "temperature": "default"
+    },
+    {
+      "at": "2026-09-04T12:06:36.490Z",
+      "provider": "featherless",
+      "model": "Qwen/Qwen3.8-27B",
+      "promptVersion": "scope-v4",
+      "thinking": "false",
+      "reasoningEffort": "low",
+      "temperature": "0",
+      "maxOutputTokens": 2048,
+      "requestTimeoutMs": 90000,
+      "results": [
+        {
+          "id": "01-contact",
+          "elapsedMs": 19624,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "02-responsive",
+          "elapsedMs": 31368,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "03-gallery",
+          "elapsedMs": 27801,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "04-revision",
+          "elapsedMs": 29411,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "05-defect",
+          "elapsedMs": 41473,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "06-login",
+          "elapsedMs": 35682,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "07-payment",
+          "elapsedMs": 24053,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "08-booking",
+          "elapsedMs": 19806,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "09-language",
+          "elapsedMs": 20484,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "10-filter",
+          "elapsedMs": 18860,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "11-search",
+          "elapsedMs": 20929,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "12-dashboard",
+          "elapsedMs": 24603,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "13-pages",
+          "elapsedMs": 39642,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "14-images",
+          "elapsedMs": 25971,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "15-revisions",
+          "elapsedMs": 22483,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "16-inboxes",
+          "elapsedMs": 22051,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "17-vague",
+          "elapsedMs": 15796,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "18-integrate",
+          "elapsedMs": 14209,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "19-unclear-bug",
+          "elapsedMs": 23186,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "20-mixed",
+          "elapsedMs": 56483,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "21-injection",
+          "elapsedMs": 30045,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "22-absent",
+          "elapsedMs": 31808,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "23-amendment",
+          "elapsedMs": 24193,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "24-superseded",
+          "elapsedMs": 55196,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        },
+        {
+          "id": "25-ambiguous-baseline",
+          "elapsedMs": 20968,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false,
+          "provider": "featherless",
+          "model": "Qwen/Qwen3.8-27B"
+        }
+      ]
     }
   ],
   "liveBrowser": {
@@ -243,6 +719,28 @@
       "covered",
       "modifies_existing",
       "out_of_scope"
+    ],
+    "refresh": true,
+    "authenticatedReadback": true,
+    "evidenceLinks": true,
+    "viewports": [
+      1440,
+      390
+    ],
+    "screenshotsInspected": true
+  },
+  "finalLiveBrowser": {
+    "checkedAt": "2026-09-04T12:16:47.946Z",
+    "promptVersion": "scope-v4",
+    "provider": "featherless",
+    "model": "Qwen/Qwen3.8-27B",
+    "temperature": 0,
+    "status": "passed",
+    "tasks": 3,
+    "categories": [
+      "modifies_existing",
+      "out_of_scope",
+      "covered"
     ],
     "refresh": true,
     "authenticatedReadback": true,

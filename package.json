@@ -15,6 +15,7 @@
     "test:runtime": "node scripts/verify-runtime.mjs",
     "test:live": "node scripts/run-live-evaluation.mjs",
     "test:live-browser": "playwright test --config=playwright.live.config.ts --reporter=line",
+    "verify:repository": "node scripts/verify-repository.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:status": "prisma migrate status",

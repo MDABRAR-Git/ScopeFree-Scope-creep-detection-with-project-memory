@@ -11,11 +11,12 @@ export interface AIProvider {
   }): Promise<{ text: string; model: string; provider: string }>;
 }
 const configSchema = z.object({
+  temperature: z.union([z.literal("default"), z.coerce.number().min(0).max(2)]),
   provider: z.enum(["featherless", "openai-compatible"]), baseUrl: z.url(),
   model: z.string().trim().min(1), apiKey: z.string().trim().min(1), nativeSchema: z.enum(["true", "false"]), thinking: z.enum(["default", "true", "false"]), reasoningEffort: z.enum(["default", "low", "medium", "high", "xhigh", "max"]), timeoutMs: z.coerce.number().int().min(1000).max(90000),
 });
 export function createAIProvider(): AIProvider {
-  const parsed = configSchema.safeParse({ provider: process.env.AI_PROVIDER ?? "featherless", baseUrl: process.env.AI_BASE_URL ?? "https://api.featherless.ai/v1", model: process.env.AI_MODEL, apiKey: process.env.AI_API_KEY, nativeSchema: process.env.AI_NATIVE_JSON_SCHEMA ?? "false", thinking: process.env.AI_THINKING ?? "default", reasoningEffort: process.env.AI_REASONING_EFFORT ?? "default", timeoutMs: process.env.AI_REQUEST_TIMEOUT_MS ?? 30000 });
+  const parsed = configSchema.safeParse({ provider: process.env.AI_PROVIDER ?? "featherless", baseUrl: process.env.AI_BASE_URL ?? "https://api.featherless.ai/v1", model: process.env.AI_MODEL, apiKey: process.env.AI_API_KEY, nativeSchema: process.env.AI_NATIVE_JSON_SCHEMA ?? "false", thinking: process.env.AI_THINKING ?? "default", reasoningEffort: process.env.AI_REASONING_EFFORT ?? "default", temperature: process.env.AI_TEMPERATURE ?? "default", timeoutMs: process.env.AI_REQUEST_TIMEOUT_MS ?? 30000 });
   if (!parsed.success) throw new AppError("AI_NOT_CONFIGURED", "Configure the server AI provider, endpoint, model and API key before running AI features.", 503);
   const config = parsed.data;
   const url = new URL(config.baseUrl);
@@ -47,6 +48,7 @@ class OpenAICompatibleProvider implements AIProvider {
         method: "POST", signal, redirect: "error", cache: "no-store",
         headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: config.model, messages: input.messages, max_tokens: input.maxOutputTokens,
+          ...(config.temperature !== "default" ? { temperature: config.temperature } : {}),
           ...(config.thinking !== "default" ? { chat_template_kwargs: { enable_thinking: config.thinking === "true" } } : {}),
           ...(config.reasoningEffort !== "default" ? { reasoning_effort: config.reasoningEffort } : {}),
           ...(input.responseSchema && config.nativeSchema === "true" ? { response_format: { type: "json_schema", json_schema: { name: "response", strict: true, schema: input.responseSchema } } } : {}),

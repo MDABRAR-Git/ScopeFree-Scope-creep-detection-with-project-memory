@@ -69,7 +69,8 @@ export async function analyzeRequest(requestId: string, body: unknown, sessionId
       await tx.analysisJob.delete({ where: { requestId } });
       return estimate.id;
     }));
-    return getEstimate(id);
+    // Await readback here so a rejection is handled before asynchronous lease cleanup.
+    return await getEstimate(id);
   } catch (error) {
     if (deadline.aborted && !(error instanceof AppError)) throw new AppError("AI_TIMEOUT", "Analysis timed out or was cancelled. Please retry.", 504, true);
     throw error;

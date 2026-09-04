@@ -4,6 +4,14 @@ A standalone workspace for keeping project agreements and scope changes connecte
 
 Available now: password login/logout, private projects, original-agreement paste/upload and clause confirmation, saved client requests with INR hourly rates, live scope analysis with validated citations, immutable original estimates/initial revisions and PostgreSQL persistence. Review/pricing, client proposals, Project Memory and chatbot arrive in Milestones 4–8. Memory/chat remain inactive. There is no runtime demo or seeded project content.
 
+The current application is on `abrar-dev`. Clone that branch explicitly when setting up this milestone:
+
+```sh
+git clone --branch abrar-dev https://github.com/MDABRAR-Git/ScopeFree-Scope-creep-detection-with-project-memory.git
+```
+
+`main` retains the initial repository checkpoint; `milestone-1-foundation` and `milestone-2` retain their historical milestones. The existing local `milestone-3` reference is aligned with the completed Milestone 3 checkpoint without switching branches. Only `abrar-dev` is the authorized push target for this milestone. Older checkpoints do not imply missing changes on the active development branch.
+
 ## Prerequisites
 
 - Node.js 22.13+ or 24 LTS and npm.
@@ -48,6 +56,8 @@ Native JSON-schema output is off by default; enable `AI_NATIVE_JSON_SCHEMA=true`
 ## Verification
 
 Run `npm run lint`, `npm run typecheck`, `npm test` and `npm run build`.
+
+After `git fetch origin --prune`, run `npm run verify:repository` to check Git object integrity, unresolved merge entries, conflict markers, private/generated tracked paths and pairwise merge previews across all fetched local/remote branches. If local environment files exist, it also checks branch-tip content for those exact credential values without printing them. This is not a general secret-detection guarantee. Results are saved to ignored `.local/repository-verification.json`. It does not check out or merge branches; merge previews may create unreachable Git tree objects. A clean preview applies only to the inspected commits, not to future edits or functional compatibility of arbitrary changes.
 
 Browser/runtime verification uses a **separate disposable database whose name ends in `_test`**:
 
@@ -102,6 +112,7 @@ Analysis loads all applicable accepted amendments in the same project, excludes 
 - `AI_REQUEST_TIMEOUT_MS` defaults to 30000 and cannot exceed 90000. Analysis plus its one repair is bounded by 120 seconds. Truncated model responses are rejected. Repeated invalid structured responses return `AI_OUTPUT_INVALID`, never fixture output.
 - `AI_THINKING=default` sends no model-template control. `false` or `true` sends `chat_template_kwargs.enable_thinking`. Featherless documents this extension; other compatible endpoints may not support it. `AI_REASONING_EFFORT=default` omits the option; supported explicit values are low, medium, high, xhigh and max. Choose only a value supported by the selected model. Unsupported controls can be ignored or rejected upstream.
 - Changing provider/model/controls requires only server environment changes and an application restart. It does not rewrite saved originals. Reasoning text returned separately by providers is discarded and never persisted or shown. Native schema mode is still opt-in and must be separately verified.
+- `AI_TEMPERATURE=0` requests greedy sampling for less variation in scope classifications, as documented by [Featherless](https://featherless.ai/docs/completions). The application accepts 0–2 or `default` to omit the control for other endpoints/models. Missing configuration also omits it. Lower randomness does not establish correctness; strict validation and human review still apply. The example environment and verified local configuration use zero.
 
 ### Reproduce analysis verification
 
