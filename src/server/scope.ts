@@ -13,6 +13,7 @@ export const amendmentSchema = z.strictObject({ schemaVersion: z.literal(1), cla
 export async function loadAnalysisInput(tx: Prisma.TransactionClient, requestId: string) {
   const request = await tx.changeRequest.findUnique({ where: { id: requestId }, include: { project: { include: { baseline: true } } } });
   if (!request) throw new AppError("NOT_FOUND", "Request not found.", 404);
+  if (request.hourlyRatePaise === null) throw new AppError("RATE_REQUIRED", "Set the hourly rate before analyzing this client request.", 422);
   const { project } = request;
   const baseline = project.baseline;
   if (!baseline) throw new AppError("BASELINE_REQUIRED", "Confirm the original agreement before analysis.", 422);

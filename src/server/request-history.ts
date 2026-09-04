@@ -8,9 +8,11 @@ import { AppError } from "./errors";
 
 export async function getRequestHistory(projectId: string) {
   const project = await getProject(projectId);
-  const requests = await database(() => db().changeRequest.findMany({ where: { projectId }, orderBy: { requestNumber: "desc" }, include: { estimate: { include: { revisions: true, proposal: { include: { decision: true } } } } } }));
+  const requests = await database(() => db().changeRequest.findMany({ where: { projectId }, orderBy: { requestNumber: "desc" }, include: { estimate: { include: { revisions: true, proposals: { include: { decision: true } } } } } }));
   const rows = requests.map(request => {
-    const estimate = request.estimate, proposal = estimate?.proposal, decision = proposal?.decision;
+    const estimate = request.estimate;
+    const proposal = estimate?.proposals.find(p => p.id === estimate.currentProposalId) ?? estimate?.proposals.toSorted((a,b) => b.createdAt.getTime()-a.createdAt.getTime())[0];
+    const decision = estimate?.proposals.find(p => p.decision?.outcome === "ACCEPTED")?.decision ?? proposal?.decision;
     if (proposal && (proposal.projectId !== projectId || !estimate?.revisions.some(r => r.id === proposal.approvedRevisionId)) || decision && decision.projectId !== projectId) throw new AppError("INVALID_ESTIMATE", "A billing record has inconsistent project ownership.", 422);
     const current = estimate?.revisions.find(r => r.revision === estimate.currentRevision);
     const accepted = decision?.outcome === "ACCEPTED";
@@ -31,10 +33,11 @@ export async function getRequestHistory(projectId: string) {
     return {
       id: request.id, requestNumber: request.requestNumber, summary: request.summary, description: request.text,
       createdAt: request.createdAt.toISOString(), classification, estimateId: estimate?.id ?? null,
-      status: estimate?.status ?? "NOT_ANALYZED", clientAcceptance, acceptedAt: accepted ? decision.decidedAt.toISOString() : null,
+      status: estimate?.status ?? "NOT_ANALYZED", origin: request.origin, offerStatus: proposal ? proposal.status === "PENDING" && expired ? "EXPIRED" : proposal.status : null,
+      clientAcceptance, acceptedAt: accepted ? decision.decidedAt.toISOString() : null,
       hourlyRatePaise: snapshot?.hourlyRatePaise ?? request.hourlyRatePaise,
       billing, additionalChargeReason: snapshot?.additionalChargeReason ?? "", reviewed, additional, stale,
-      pendingBilling: additional && !decision && !stale && !expired && proposal?.status !== "REVOKED",
+      pendingBilling: additional && !decision && !stale && (!proposal || (proposal.status === "PENDING" && !expired) || (proposal.status === "REVOKED" && !!proposal.revokedAt && !!current && current.createdAt > proposal.revokedAt)),
     };
   });
   const accepted = { minimum: 0n, likely: 0n, maximum: 0n }, pending = { ...accepted };

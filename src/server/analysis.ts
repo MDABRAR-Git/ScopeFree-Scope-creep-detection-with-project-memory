@@ -4,16 +4,17 @@ import { projectIdSchema } from "@/lib/contracts";
 import { additionalHours, analyzeInputSchema, overallClassification, pinnedInputSchema, validateAnalysis } from "@/lib/analysis";
 import { db, database } from "./db";
 import { AppError } from "./errors";
-import { loadAnalysisInput } from "./scope";
+import { loadAnalysisInput, amendmentSchema } from "./scope";
 import { generateAnalysis, checkContext } from "./ai/analyze";
 import { scopeMessages } from "./ai/scope-prompt";
 import { createAIProvider } from "./ai/provider";
 import { draftFromRevision, pricedSnapshot, readRevision, readStoredAnalysis } from "@/lib/review";
 import { calculatePricing } from "@/lib/pricing";
+import { clientProposalSnapshotSchema } from "@/lib/proposals";
 
 export async function getEstimate(estimateId: string) {
   if (!projectIdSchema.safeParse(estimateId).success) throw new AppError("NOT_FOUND", "Analysis not found.", 404);
-  const estimate = await database(() => db().estimate.findUnique({ where: { id: estimateId }, include: { request: { select: { projectId: true } }, revisions: { orderBy: { revision: "asc" } } } }));
+  const estimate = await database(() => db().estimate.findUnique({ where: { id: estimateId }, include: { request: { select: { projectId: true } }, revisions: { orderBy: { revision: "asc" } }, proposals: { orderBy: { createdAt: "asc" } } } }));
   if (!estimate) throw new AppError("NOT_FOUND", "Analysis not found.", 404);
   const input = pinnedInputSchema.parse(estimate.originalInputJson);
   if (input.projectId !== estimate.request.projectId || input.requestId !== estimate.requestId) throw new AppError("INVALID_ESTIMATE", "The saved analysis has inconsistent source ownership.", 422);
@@ -22,9 +23,17 @@ export async function getEstimate(estimateId: string) {
   const current = revisions.find(r => r.revision === estimate.currentRevision);
   if (!current) throw new AppError("INVALID_ESTIMATE", "The saved review is missing.", 422);
   const analysis = validateAnalysis(current.snapshot.analysis, input.sources);
+  const decisions = await database(() => db().projectDecision.findMany({ where: { projectId: input.projectId, outcome: "ACCEPTED", supersededBy: null }, orderBy: { decidedAt: "asc" }, select: { id: true, title: true, amendmentClausesJson: true } }));
+  const supersessionOptions = decisions.map(d => ({ id: d.id, title: d.title, clauses: amendmentSchema.parse(d.amendmentClausesJson).clauses.map(c => ({ id: c.id, text: c.text })) })).filter(d => d.clauses.length > 0);
+  const offers = estimate.proposals.map(p => {
+    const snapshot = clientProposalSnapshotSchema.safeParse(p.snapshotJson);
+    return { id: p.id, status: p.status, expiresAt: p.expiresAt.toISOString(), createdAt: p.createdAt.toISOString(), approvedRevisionId: p.approvedRevisionId,
+      replacesProposalId: p.replacesProposalId, comment: p.decisionComment, decidedAt: p.decidedAt?.toISOString() ?? null, offer: snapshot.success ? snapshot.data.client : null };
+  });
   const approvalEvents = await database(() => db().auditEvent.findMany({ where: { projectId: input.projectId, entityId: estimate.id, entityType: "estimate", action: { in: ["approved", "review_reopened"] } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true, action: true, revisionId: true, createdAt: true } }));
   return { id: estimate.id, projectId: input.projectId, requestId: input.requestId, requestText: input.requestText,
-    analysis, originalAnalysis, draft: draftFromRevision(current.snapshot), calculated: current.snapshot.calculated, legacyRevision: current.snapshot.legacy, approvedRevisionId: estimate.approvedRevisionId, sources: input.sources, scopeRevision: input.scopeRevision, hourlyRatePaise: input.hourlyRatePaise,
+    analysis, originalAnalysis, draft: draftFromRevision(current.snapshot), agreement: current.snapshot.agreement, supersessionOptions, offers, currentProposalId: estimate.currentProposalId,
+    calculated: current.snapshot.calculated, legacyRevision: current.snapshot.legacy, approvedRevisionId: estimate.approvedRevisionId, sources: input.sources, scopeRevision: input.scopeRevision, hourlyRatePaise: input.hourlyRatePaise,
     overallClassification: overallClassification(analysis), additionalHours: additionalHours(analysis),
     status: estimate.status, currentRevision: estimate.currentRevision, createdAt: estimate.createdAt.toISOString(),
     provenance: { provider: estimate.provider, model: estimate.model, promptVersion: estimate.promptVersion },

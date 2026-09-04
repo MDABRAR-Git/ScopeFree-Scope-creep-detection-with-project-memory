@@ -17,6 +17,7 @@ model Project {
   proposals     Proposal[]
   decisions     ProjectDecision[]
   auditEvents   AuditEvent[]
+  intakeLinks   ClientIntakeLink[]
 }
 
 model Baseline {
@@ -39,6 +40,7 @@ model ChangeRequest {
   text                 String
   basedOnScopeRevision Int
   hourlyRatePaise       Int?
+  origin               String           @default("freelancer")
   supersedesDecisionId String?          @db.Uuid
   supersedesDecision   ProjectDecision? @relation("RequestSupersession", fields: [supersedesDecisionId], references: [id], onDelete: Restrict)
   createdAt            DateTime         @default(now()) @db.Timestamptz(3)
@@ -69,7 +71,9 @@ model Estimate {
   approvedRevisionId     String?          @unique @db.Uuid
   approvedRevision       EstimateRevision? @relation("EstimateApproval", fields: [approvedRevisionId], references: [id], onDelete: Restrict)
   revisions              EstimateRevision[] @relation("EstimateRevisions")
-  proposal               Proposal?
+  proposals              Proposal[] @relation("EstimateProposals")
+  currentProposalId      String? @unique @db.Uuid
+  currentProposal        Proposal? @relation("CurrentProposal", fields: [currentProposalId], references: [id], onDelete: Restrict)
   createdAt              DateTime         @default(now()) @db.Timestamptz(3)
 }
 
@@ -99,8 +103,12 @@ model Proposal {
   id                   String           @id @default(uuid()) @db.Uuid
   projectId            String           @db.Uuid
   project              Project          @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  estimateId           String           @unique @db.Uuid
-  estimate             Estimate         @relation(fields: [estimateId], references: [id], onDelete: Restrict)
+  estimateId           String           @db.Uuid
+  estimate             Estimate         @relation("EstimateProposals", fields: [estimateId], references: [id], onDelete: Restrict)
+  currentFor           Estimate?        @relation("CurrentProposal")
+  replacesProposalId   String?          @unique @db.Uuid
+  replacesProposal     Proposal?        @relation("OfferReplacement", fields: [replacesProposalId], references: [id], onDelete: Restrict)
+  replacedBy           Proposal?        @relation("OfferReplacement")
   approvedRevisionId   String           @db.Uuid
   approvedRevision     EstimateRevision @relation(fields: [approvedRevisionId], references: [id], onDelete: Restrict)
   snapshotJson         Json             @db.JsonB
@@ -114,6 +122,29 @@ model Proposal {
   createdAt            DateTime         @default(now()) @db.Timestamptz(3)
   decision             ProjectDecision?
   @@index([projectId, createdAt])
+  @@index([estimateId, createdAt])
+}
+
+model ClientIntakeLink {
+  id          String @id @default(uuid()) @db.Uuid
+  projectId   String @db.Uuid
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  tokenHash   String @unique
+  expiresAt   DateTime @db.Timestamptz(3)
+  revokedAt   DateTime? @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  attempts    Int @default(0)
+  windowStart DateTime @default(now()) @db.Timestamptz(3)
+  @@index([projectId, createdAt])
+}
+
+model OperationReceipt {
+  scope       String
+  key         String @db.Uuid
+  bodyHash    String
+  resultJson  Json @db.JsonB
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  @@id([scope, key])
 }
 
 enum DecisionOutcome {
