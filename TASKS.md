@@ -1,6 +1,6 @@
 # Implementation checklist — 24 hours, four members
 
-> Milestone 4 user amendment (September 4, 2026): `docs/milestone-4.md` supersedes conflicting older text below. Use IN_SCOPE / MODIFICATION / NEW_FEATURE / UNCERTAIN in new inputs and UI while preserving immutable historical originals. Retain minimum/likely/maximum ranges. Permit one optional fixed additional charge per request with a required client-facing reason, added once per scenario. Include Request History, Additional Requests and stored billing summaries. Client submission/acceptance remains Milestone 5; edits to a shared pending offer must invalidate it and require reapproval. Test, commit and push milestone-4 to origin/milestone-4; no deployment.
+> Milestone 4 user amendment (September 4, 2026): `docs/milestone-4.md` supersedes conflicting older text below. Use IN_SCOPE / MODIFICATION / NEW_FEATURE / UNCERTAIN in new inputs and UI while preserving immutable historical originals. Retain minimum/likely/maximum ranges. Permit one optional fixed additional charge per request with a required client-facing reason, added once per scenario. Include Request History, Additional Requests and stored billing summaries. Client submission/acceptance remains Milestone 5; edits to a shared pending offer must invalidate it and require reapproval. Latest branch instruction (September 4, 2026): complete Milestone 4 and all future work directly on `abrar-dev`, test, commit and push only to `origin/abrar-dev`. Do not create or push separate milestone/feature branches. This supersedes earlier branch instructions; no deployment.
 
 SPEC.md is authoritative. Check boxes only after verifying the exit condition. This is an implementation plan, not evidence of completed work.
 
@@ -13,7 +13,7 @@ SPEC.md is authoritative. Check boxes only after verifying the exit condition. T
 | Member 3 | Provider adapter, analysis prompts/validation, chat retrieval/answer service, evals | Member 2 for source queries; Member 4 for chat UI |
 | Member 4 | Client proposal UI, Memory/chat UI, integration/deployment coordination, README | Member 2 for decisions; Member 3 for citations |
 
-One standalone repository. Each owner works on a feature branch; main remains runnable. Review/merge small PRs every 2–3 hours, then sync main into active branches. Use fixed test fixtures against agreed schemas during development; the runtime must never offer seeded analysis. Another member reviews the integration coordinator's own changes.
+One standalone repository. All work is coordinated directly on `abrar-dev` and pushed only to `origin/abrar-dev`; do not create or push separate milestone/feature branches. Review small coherent commits regularly and coordinate shared-file changes. Use fixed test fixtures against agreed schemas during development; the runtime must never offer seeded analysis. Another member reviews the integration coordinator's own changes.
 
 ## Phase 1 — Foundation and shared contracts (hours 0–2)
 - [ ] Create the standalone repository/application, ignoring environment secrets and generated files.

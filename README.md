@@ -4,13 +4,13 @@ A standalone workspace for keeping project agreements and scope changes connecte
 
 Available now: password login/logout, private projects, original-agreement paste/upload and clause confirmation, saved client requests with INR hourly rates, live scope analysis with validated citations, immutable original estimates/initial revisions and PostgreSQL persistence. Editable reviews, deterministic price ranges, internal approval, Request History, Additional Requests and billing summaries are included. Client submission/proposals/acceptance, Project Memory and chatbot remain Milestones 5–8. Memory/chat remain inactive. There is no runtime demo or seeded project content.
 
-The current application is on `milestone-4`, based on completed Milestone 3 on `abrar-dev`. Clone that branch explicitly when setting up this milestone:
+The current application, including completed Milestone 4, is on `abrar-dev`. Clone that branch explicitly:
 
 ```sh
-git clone --branch milestone-4 https://github.com/MDABRAR-Git/ScopeFree-Scope-creep-detection-with-project-memory.git
+git clone --branch abrar-dev https://github.com/MDABRAR-Git/ScopeFree-Scope-creep-detection-with-project-memory.git
 ```
 
-`main` retains the initial repository checkpoint; `milestone-1-foundation` and `milestone-2` retain their historical milestones. The existing local `milestone-3` reference is aligned with the completed Milestone 3 checkpoint without switching branches. Milestone 4 is committed and pushed only to `origin/milestone-4`; `abrar-dev` preserves the completed Milestone 3 checkpoint. Older checkpoints do not imply missing changes on the active development branch.
+Per the user's September 4, 2026 correction, all future work is completed, tested and committed directly on `abrar-dev`, then pushed only to `origin/abrar-dev`. Do not create or push separate milestone/feature branches. Milestone 4's original commit is included in `abrar-dev` with its history preserved. Existing other branches remain historical checkpoints; they are not future development or push targets.
 
 ## Prerequisites
 

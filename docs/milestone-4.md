@@ -1,5 +1,7 @@
 # Milestone 4 — Review, pricing and request history
 
+> Latest user correction (September 4, 2026): include Milestone 4 in `abrar-dev`. All future work must be completed and committed directly on `abrar-dev` and pushed only to `origin/abrar-dev`; do not create or push separate milestone/feature branches. This supersedes earlier delivery-branch instructions.
+
 ## Agreed changes and acceptance checks (before implementation)
 
 The latest user decisions supersede conflicting SPEC.md rules: use IN_SCOPE, MODIFICATION, NEW_FEATURE and UNCERTAIN; retain reviewed minimum/likely/maximum ranges; add one optional fixed charge per request with a client-facing reason. One client request remains one record regardless of task count. Client intake/acceptance/shared offers remain Milestone 5. Editing a shared pending offer in that milestone must invalidate the previous offer and require freelancer reapproval. Accepted snapshots remain immutable; projects never lock against new requests.
@@ -11,7 +13,7 @@ The latest user decisions supersede conflicting SPEC.md rules: use IN_SCOPE, MOD
 5. Stable project request numbers, summaries, all-request history, separate additional-request counts, status and billing summaries derive from persisted records. No tasks counted as requests and no internal approval labelled client acceptance. Accepted amounts use accepted snapshots; declined amounts do not enter pending/accepted sums.
 6. Access/origin/evidence boundaries, competing saves, transactional rollback and refresh/restart persistence pass tests. Production build, lint/types, regressions and desktop/mobile/keyboard/error screens are checked.
 7. Existing Milestone 3 records are readable through a compatibility reader without rewriting AI originals. Live new-schema analysis is verified separately from test doubles. Credentials stay ignored and server-only.
-8. Commit/push milestone-4 only after verification. No deployment or Milestone 5 implementation.
+8. Commit/push to `abrar-dev` / `origin/abrar-dev` only after verification. No deployment or Milestone 5 implementation.
 
 ## Results
 
@@ -35,7 +37,7 @@ The separate `npm run test:live-browser` completion check passed in 1.2 minutes 
 
 ### Delivery and limits
 
-Delivery branch/target: `milestone-4` → `origin/milestone-4`, with verification before commit/push. No deployment.
+Current delivery branch/target: `abrar-dev` → `origin/abrar-dev`. The verified implementation commit `34c141e` was originally pushed to `milestone-4`; following the user's correction, `abrar-dev` was fast-forwarded to include that exact commit without changing application code or rewriting history. Earlier milestone checkpoints are already ancestors of this commit. No deployment.
 
 A pre-commit scan of all 117 non-ignored repository files found no configured credential matches, private/generated paths or conflict markers. Actual credentials, databases, build outputs and screenshots remain ignored.
 
