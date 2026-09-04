@@ -6,7 +6,7 @@ import { requirePageSession } from "@/server/auth";
 export default async function ProjectsPage() {
   const session = await requirePageSession();
   const projects = await listProjects(session.userId);
-  return <><nav className="breadcrumb" aria-label="Breadcrumb"><span>Workspace</span><span>/</span><strong>Projects</strong></nav><div className="page-heading"><div><p className="eyebrow">PROJECT PORTFOLIO</p><h1>Your projects</h1><p className="muted">Agreements, requests, and decisions in one accountable record.</p></div><span className="count-badge">{projects.length} {projects.length === 1 ? "project" : "projects"}</span></div>
+  return <div className="page-container"><nav className="breadcrumb" aria-label="Breadcrumb"><span>Workspace</span><span>/</span><strong>Projects</strong></nav><div className="page-heading"><div><p className="eyebrow">PROJECT PORTFOLIO</p><h1>Your projects</h1><p className="muted">Agreements, requests, and decisions in one accountable record.</p></div><span className="count-badge">{projects.length} {projects.length === 1 ? "project" : "projects"}</span></div>
     <section className="new-project-panel" aria-labelledby="create-title"><div className="panel-intro"><span className="panel-icon"><FolderOpen size={22} aria-hidden="true" /></span><div><h2 id="create-title">A new project starts here</h2><p className="muted">Create a dedicated space for your next piece of work.</p></div></div><CreateProjectForm /></section>
     <section className="project-section" aria-labelledby="projects-title"><div className="section-heading"><h2 id="projects-title">All projects <span>{projects.length}</span></h2><span className="section-caption">Your work, in one place</span></div>
       {projects.length === 0 ? <div className="empty-state"><div className="empty-art" aria-hidden="true"><FolderOpen size={43} strokeWidth={1.2} /><span><Leaf size={19} /></span></div><h3>A fresh start, a clear scope.</h3><p>Your projects will live here. Give your first project a name<br className="desktop-break" /> above to open its workspace.</p><span className="empty-footnote"><LockKeyhole size={13} aria-hidden="true" /> Private to your workspace</span></div> : <div className="project-grid">
@@ -16,5 +16,5 @@ export default async function ProjectsPage() {
           <div className="project-card-footer"><span>Created {new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" }).format(project.createdAt)}</span><span>Open workspace</span></div>
         </Link>)}
       </div>}
-    </section><footer className="page-footer"><span className="footer-dot" /> A clear beginning for every project.</footer></>;
+    </section><footer className="page-footer"><span className="footer-dot" /> A clear beginning for every project.</footer></div>;
 }

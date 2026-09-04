@@ -9,10 +9,10 @@ export default async function ProjectLayout({ params, children }: { params: Prom
   const session = await requirePageSession();
   const { projectId } = await params;
   const project = await getProject(projectId, session.userId).catch(error => { if (error instanceof AppError && error.code === "NOT_FOUND") notFound(); throw error; });
-  return <>
+  return <div className="project-shell"><ProjectTabs projectId={project.id} projectName={project.name} /><div className="project-content">
     <nav className="breadcrumb" aria-label="Breadcrumb"><Link href="/projects">Projects</Link><ChevronRight size={12} aria-hidden="true" /><span className="breadcrumb-project">{project.name}</span></nav>
     <Link href="/projects" className="back-link"><ArrowLeft size={15} aria-hidden="true" />All projects</Link>
     <div className="page-heading project-heading"><div><p className="eyebrow">PROJECT WORKSPACE</p><h1>{project.name}</h1><p className="muted">The home for your agreement and the changes that follow.</p></div><span className="neutral-badge"><LockKeyhole size={13} aria-hidden="true" />Private project</span></div>
-    <ProjectTabs projectId={project.id} />{children}
-  </>;
+    {children}
+  </div></div>;
 }

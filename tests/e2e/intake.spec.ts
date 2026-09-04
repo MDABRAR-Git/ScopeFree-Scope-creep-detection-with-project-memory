@@ -115,7 +115,7 @@ test("desktop and mobile paste, clause review, confirmation, request save and re
     await page.getByLabel("Email address").fill(process.env.TEST_EMAIL!); await page.getByLabel("Password").fill(process.env.TEST_PASSWORD!); await page.getByLabel("Password").press("Enter");
     await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
     await page.getByLabel("Project name", { exact: true }).fill(`Milestone 2 flow ${viewport.width} ${randomUUID().slice(0, 6)}`); await page.getByRole("button", { name: "Create project" }).click();
-    await page.getByRole("link", { name: "Requests", exact: true }).click(); await expect(page.getByRole("heading", { name: "Start with the original agreement" })).toBeVisible();
+    await page.getByRole("link", { name: "Requirements", exact: true }).click(); await expect(page.getByRole("heading", { name: "Start with the original agreement" })).toBeVisible();
     await page.getByRole("link", { name: "Add baseline", exact: true }).click();
     const skipLink = page.getByRole("link", { name: "Skip to content" });
     await expect(skipLink).toHaveCSS("clip-path", "inset(50%)");

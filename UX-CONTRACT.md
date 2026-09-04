@@ -78,7 +78,7 @@
 - Route document title policy: root title template is `Page · ScopeFree`; page-specific titles should be added as routes evolve and must contain no secrets.
 - Route error / 403 page behavior: app-owned not-found and recoverable error pages link to a safe workspace destination and expose no internals.
 - Breadcrumb/tab/route-state policy: breadcrumbs represent Workspace → Project hierarchy; project sections are route-backed navigation links with `aria-current`.
-- Sidebar transformation: persistent workspace rail on desktop; hidden on narrow screens where the top-bar brand links to Projects. Project navigation becomes a single horizontally scrollable row.
+- Sidebar transformation: adjacent workspace and project rails on desktop, each with its own control inside the rail and independently collapsible to an icon rail. On narrow screens each rail becomes a separately labeled, dismissible drawer with a scrim and a visible close control.
 - Responsive data strategy: independent records stack; financial scenarios retain aligned three-column comparison until narrow mobile, then stack only where required for readability.
 - Truncation/full-value access: wrap essential values; ellipsis is limited to account identity where the full address is not needed for the task.
 - Focus/sticky policy: focused content must not sit beneath sticky chrome; sticky estimate summaries become static below the desktop grid breakpoint.
@@ -112,7 +112,7 @@
 
 - Authenticated routes require the account session; foreign or unknown project records use the existing safe not-found behavior.
 - Client links are shown only when returned and copied only after an explicit button action. Success text never repeats the secret.
-- Unavailable Ask Project Memory remains visibly disabled with its existing Milestone 7 explanation.
+- Unavailable Project AI Chatbot remains visibly disabled with its existing Milestone 7 explanation.
 
 ## Migration status
 

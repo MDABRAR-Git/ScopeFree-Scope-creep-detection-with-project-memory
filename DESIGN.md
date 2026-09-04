@@ -100,7 +100,7 @@ The authenticated product uses the Segoe UI variable system stack for a crisp B2
 
 ## Layout
 
-The desktop shell uses a 64px top bar, a 208px navigation rail, and a fluid content area capped at 75rem. Project context and route navigation form one compact header. Major sections use a 28–32px rhythm; related subcontent uses 12–18px gaps. Interactive forms may use a contained surface, while read-only records use ledger rows and dividers. At 760px and below, the sidebar disappears, project navigation scrolls horizontally in one row, all grids stack, and actions remain at least 44px high. The document owns vertical scrolling; sticky summaries become static before they can compete with mobile scrolling.
+The desktop shell uses a 64px top bar, a 208px workspace rail, an adjacent 228px project rail, and a fluid content area capped at 75rem. Both rails collapse independently to 68px and keep icon access visible. Major sections use a 28–32px rhythm; related subcontent uses 12–18px gaps. Interactive forms may use a contained surface, while read-only records use ledger rows and dividers. At 760px and below, both rails become dismissible drawers opened by labeled controls, all grids stack, and actions remain at least 44px high. The document owns vertical scrolling; sticky summaries become static before they can compete with mobile scrolling.
 
 ## Elevation & Depth
 
@@ -122,7 +122,7 @@ Primary buttons are solid green and appear once per decision area. Secondary act
 
 ### Navigation and data display
 
-The workspace rail owns top-level Projects navigation. Project sections are route-backed links with a persistent selected state. On mobile they scroll horizontally instead of wrapping. Breadcrumbs show hierarchy without duplicating a separate back row. Projects, requests, clauses, and memory entries use dense rows with status, primary text, metadata, and actions aligned consistently. Status never relies on color alone.
+The workspace rail owns top-level Projects navigation. The adjacent project rail owns Overview, Baseline, Requirements, Project Memory, and the visibly unavailable Project AI Chatbot. Project sections are route-backed links with a persistent selected state. Both rails provide explicit expand and collapse controls inside the rail itself on desktop and labeled drawer controls on mobile. Breadcrumbs show hierarchy without duplicating a separate back row. Projects, requests, clauses, and memory entries use dense rows with status, primary text, metadata, and actions aligned consistently. Status never relies on color alone.
 
 ### Forms and overlays
 
