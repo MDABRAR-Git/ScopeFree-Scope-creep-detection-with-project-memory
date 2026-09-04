@@ -1,0 +1,26 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["src"],
+  "locale": "en-IN",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Select/Listbox", "Form", "Scrollbar", "CRUD"],
+  "ownership": {
+    "Select/Listbox": "native",
+    "Form": "authored",
+    "Scrollbar": "global",
+    "CRUD": "server-backed"
+  },
+  "requiredCommands": ["lint", "typecheck", "unit", "e2e", "build", "premium"],
+  "commands": {
+    "lint": "npm run lint",
+    "typecheck": "npm run typecheck",
+    "unit": "npm test",
+    "e2e": "npm run test:e2e",
+    "build": "npm run build",
+    "premium": "python <skill>/scripts/audit_project.py . --mode strict"
+  },
+  "evidence": {
+    "crudFullFlow": "tests/e2e/intake.spec.ts",
+    "failurePaths": "tests/e2e/foundation.spec.ts"
+  }
+}

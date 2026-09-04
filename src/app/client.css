@@ -24,3 +24,31 @@
 .agreement-editor select { width:100%; min-width:0; padding:12px; margin:10px 0; font:inherit; }
 .agreement-editor .review-field { margin-top:20px; }
 @media(max-width:720px) { .client-page { padding:20px 16px 40px; }.client-page h1 { font-size:25px; }.offer-content .review-price-range { grid-template-columns:minmax(0,1fr); }.offer-buttons .button { width:100%; }.client-page .intake-panel { padding:20px 16px; }.offer-content,.share-link,.agreement-editor { overflow-wrap:anywhere; } }
+
+/* Client-facing offer and intake surfaces share the product's document language. */
+.client-page { max-width: 880px; padding: 25px 24px 52px; }
+.client-page header { margin-bottom: 24px; padding-bottom: 16px; }
+.client-brand { color: var(--green); font-size: 23px; letter-spacing: -.035em; }
+.client-page h1 { margin: 16px 0 8px; font-size: 28px; }
+.client-page h2 { margin: 17px 0 12px; font-size: 20px; }
+.client-page h3 { font-size: 16px; }
+.client-page p, .offer-content p { line-height: 1.65; }
+.client-page .intake-panel { margin: 14px 0; padding: 20px; border-radius: 9px; box-shadow: 0 1px 1px rgb(23 42 34 / .025); }
+.offer-content > h2 { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.offer-content .review-price-range { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; }
+.offer-content .review-price-range > div { border: 0; border-right: 1px solid var(--border); border-radius: 0; }
+.offer-content .review-price-range > div:last-child { border-right: 0; }
+.offer-content .intake-panel { position: relative; margin: 10px 0; padding: 17px 18px 17px 21px; border-radius: 8px; box-shadow: none; }
+.offer-content .intake-panel::before { content: ""; position: absolute; inset: -1px auto -1px -1px; width: 3px; border-radius: 8px 0 0 8px; background: #6d9077; }
+.offer-content blockquote { margin: 12px 0; border-left-color: #789780; background: #f6f8f6; padding: 9px 13px; }
+.offer-budget-note { padding: 14px 16px; border: 1px solid #d2ded5; border-radius: 7px; background: #edf3ee; }
+.share-link { margin: 14px 0; padding: 15px; border-color: #cfdbd1; background: #f5f8f5; }
+.agreement-clause { margin: 12px 0; padding: 14px; border-color: var(--border); }
+
+@media (max-width: 720px) {
+  .client-page { padding: 18px 15px 36px; }
+  .client-page .intake-panel { padding: 17px 14px; }
+  .offer-content .review-price-range { grid-template-columns: 1fr; }
+  .offer-content .review-price-range > div { border-right: 0; border-bottom: 1px solid var(--border); }
+  .offer-content .review-price-range > div:last-child { border-bottom: 0; }
+}

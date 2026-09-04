@@ -11,26 +11,27 @@ const statusLabels: Record<string, string> = { REVIEW_REQUIRED: "Review required
 export function RequestHistoryView({ history, projectId }: { history: RequestHistory; projectId: string }) {
   const { rows, summary } = history;
   function card(row: RequestHistory["rows"][number], detail = false) {
-    return <article className="intake-panel request-card" key={row.id}>
-      <div className="request-card-meta"><span className="neutral-badge">{row.classification ?? "Not analyzed"}</span><time dateTime={row.createdAt}>{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(row.createdAt))} UTC</time></div>
-      <h4>#{row.requestNumber} — {row.summary}</h4>{!detail && <p className="source-text">{row.description}</p>}<p>{statusLabels[row.status]} · Client acceptance: {row.clientAcceptance}</p><p>Submitted by {row.origin === "client" ? "client" : "freelancer"}{row.offerStatus ? ` · Offer: ${row.offerStatus}` : ""}</p>
-      {row.stale && row.clientAcceptance !== "ACCEPTED" && <p className="field-help">Scope has changed since this request. Excluded from pending billing.</p>}
-      {row.hourlyRatePaise != null && <p>{formatMoney(row.hourlyRatePaise)} / hour</p>}
-      {row.billing ? <><p>Billable hours: {row.billing.billableQuarterHours.minimum / 4}–{row.billing.billableQuarterHours.maximum / 4} h · likely {row.billing.billableQuarterHours.likely / 4} h</p>
-        {detail && <p>Labor: <MoneyRange value={row.billing.laborChargePaise} /></p>}
-        <p>Additional charge: {formatMoney(row.billing.additionalChargePaise)}</p>{detail && row.additionalChargeReason && <p className="source-text">Reason: {row.additionalChargeReason}</p>}
-        <p><strong>{row.billing.provisional ? "Provisional total" : "Total estimate"}: <MoneyRange value={row.billing.totalChargePaise} /></strong></p>
-        {row.billing.provisional && <p className="uncertainty-note">Unresolved work is excluded. Billing cannot be finalized.</p>}</> : <p>Billable hours and prices await review.</p>}
-      {row.acceptedAt && <p>Accepted: {new Date(row.acceptedAt).toISOString()}</p>}
-      {!detail && (row.hourlyRatePaise === null && !row.estimateId ? <RequestRate requestId={row.id}/> : <AnalyzeButton requestId={row.id} projectId={projectId} estimateId={row.estimateId ?? undefined} />)}
-      {detail && row.estimateId && <Link className="back-link" href={`/projects/${projectId}/estimates/${row.estimateId}`}>Open review</Link>}
+    return <article className={`request-card${detail ? " request-card-detail" : ""}`} key={row.id}>
+      <div className="request-card-meta"><div><span className={`status-rail scope-${row.classification ?? "PENDING"}`} aria-hidden="true" /><span className="neutral-badge">{row.classification ?? "Not analyzed"}</span><span className="request-state">{statusLabels[row.status]}</span></div><time dateTime={row.createdAt}>{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(row.createdAt))} UTC</time></div>
+      <div className="request-card-layout"><div className="request-card-copy"><h4><span>#{row.requestNumber}</span>{row.summary}</h4>{!detail && <p className="source-text">{row.description}</p>}<div className="request-tags"><span>Client acceptance: {row.clientAcceptance}</span><span>Submitted by {row.origin === "client" ? "client" : "freelancer"}</span>{row.offerStatus && <span>Offer: {row.offerStatus}</span>}</div>
+        {row.stale && row.clientAcceptance !== "ACCEPTED" && <p className="field-help">Scope has changed since this request. Excluded from pending billing.</p>}
+        {detail && row.additionalChargeReason && <p className="source-text request-reason"><strong>Charge reason:</strong> {row.additionalChargeReason}</p>}
+        {row.billing?.provisional && <p className="uncertainty-note">Unresolved work is excluded. Billing cannot be finalized.</p>}
+        {row.acceptedAt && <p className="field-help">Accepted: {new Date(row.acceptedAt).toISOString()}</p>}
+      </div>
+      <dl className="request-facts">
+        <div><dt>Rate</dt><dd>{row.hourlyRatePaise != null ? <>{formatMoney(row.hourlyRatePaise)} <small>/ hour</small></> : "Awaiting rate"}</dd></div>
+        <div><dt>Billable hours</dt><dd>{row.billing ? <>{row.billing.billableQuarterHours.minimum / 4}–{row.billing.billableQuarterHours.maximum / 4} h <small>likely {row.billing.billableQuarterHours.likely / 4} h</small></> : "Awaiting review"}</dd></div>
+        {detail && row.billing && <div><dt>Labor</dt><dd><MoneyRange value={row.billing.laborChargePaise} /></dd></div>}
+        <div><dt>Additional charge</dt><dd>{row.billing ? formatMoney(row.billing.additionalChargePaise) : "Awaiting review"}</dd></div>
+        <div className="request-total"><dt>{row.billing?.provisional ? "Provisional total" : "Total estimate"}</dt><dd>{row.billing ? <MoneyRange value={row.billing.totalChargePaise} /> : "Awaiting review"}</dd></div>
+      </dl></div>
+      <div className="request-card-actions">{!detail && (row.hourlyRatePaise === null && !row.estimateId ? <RequestRate requestId={row.id}/> : <AnalyzeButton requestId={row.id} projectId={projectId} estimateId={row.estimateId ?? undefined} />)}{detail && row.estimateId && <Link className="button button-secondary" href={`/projects/${projectId}/estimates/${row.estimateId}`}>Open review</Link>}</div>
     </article>;
   }
   return <section className="intake-section" aria-label="Request tracking">
-    <section className="intake-panel" aria-labelledby="billing-summary-title"><h3 id="billing-summary-title">Billing summary</h3>
-      <p>Total Requests: {summary.totalRequests} · Additional Requests: {summary.additionalRequests} · IN_SCOPE Requests: {summary.inScopeRequests}</p>
-      <p>Accepted Additional Billing: <MoneyRange value={summary.acceptedAdditionalPaise} /></p>
-      <p>Pending Additional Billing: <MoneyRange value={summary.pendingAdditionalPaise} /></p>
+    <section className="billing-summary" aria-labelledby="billing-summary-title"><div className="billing-summary-heading"><div><p className="eyebrow">COMMERCIAL OVERVIEW</p><h3 id="billing-summary-title">Billing summary</h3></div><div className="billing-counts"><span>Total Requests <strong>{summary.totalRequests}</strong></span><span>Additional Requests <strong>{summary.additionalRequests}</strong></span><span>IN_SCOPE Requests <strong>{summary.inScopeRequests}</strong></span></div></div>
+      <div className="billing-ranges"><div><span>Accepted Additional Billing</span><strong><MoneyRange value={summary.acceptedAdditionalPaise} /></strong></div><div><span>Pending Additional Billing</span><strong><MoneyRange value={summary.pendingAdditionalPaise} /></strong></div></div>
       <p className="field-help">Pending billing includes saved, reviewed requests awaiting client acceptance. Unreviewed, uncertain, declined, revoked, expired and stale requests are excluded. Internal approval is not client acceptance.</p>
     </section>
     <section aria-labelledby="request-history-title"><div className="section-heading"><h3 id="request-history-title">Request History</h3><span>Total Requests: {summary.totalRequests}</span></div>

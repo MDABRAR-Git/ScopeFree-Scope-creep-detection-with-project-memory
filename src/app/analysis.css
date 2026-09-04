@@ -130,3 +130,80 @@
   .review-history-content .analysis-task { padding:16px 12px; }
   .review-validation,.review-error,.review-feedback { padding:15px; }
 }
+
+/* Estimate analysis and review hierarchy. */
+.analysis-layout { grid-template-columns: minmax(0, 1fr) 300px; gap: 17px; }
+.analysis-tasks { gap: 11px; }
+.analysis-task { position: relative; padding: 19px 20px 18px 23px; border-radius: 8px; box-shadow: 0 1px 1px rgb(23 42 34 / .025); }
+.analysis-task::before { content: ""; position: absolute; inset: -1px auto -1px -1px; width: 4px; border-radius: 8px 0 0 8px; background: #678676; }
+.analysis-task:has(.scope-NEW_FEATURE)::before { background: #b25e3b; }
+.analysis-task:has(.scope-MODIFICATION)::before { background: #50789f; }
+.analysis-task:has(.scope-UNCERTAIN)::before { background: #b07d21; }
+.analysis-task h3 { margin-bottom: 9px; font-size: 17px; }
+.task-top { margin-bottom: 12px; }
+.scope-label { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+.scope-IN_SCOPE { background: #e2eee5; color: #286342; }
+.scope-NEW_FEATURE { background: #f8e8e2; color: #8c4028; }
+.scope-MODIFICATION { background: #e7edf4; color: #365d81; }
+.scope-UNCERTAIN { background: #f8efcf; color: #755712; }
+.hours-grid { margin: 15px 0; padding: 11px 13px; border-color: #dce3dd; background: #f7f9f7; }
+.hours-grid dd { margin-top: 3px; font-size: 20px; font-variant-numeric: tabular-nums; }
+.task-evidence h4, .analysis-notes h4, .analysis-summary h4 { margin: 14px 0 7px; }
+.task-evidence blockquote { margin: 8px 0; padding: 11px 13px; border-left-color: #71947b; background: #f4f7f4; }
+.analysis-summary { top: 82px; padding: 19px; border-color: #cbd8ce; box-shadow: var(--shadow-low); }
+.analysis-summary h3 { margin: 7px 0 10px; font-size: 20px; }
+.summary-hours { color: var(--ink); font-size: 27px; font-variant-numeric: tabular-nums; }
+.analysis-summary hr { margin: 17px 0; }
+.uncertainty-note { border-color: #e4d29b; background: #fbf4dc; color: #70561d; }
+.analysis-sources { margin-top: 27px; }
+
+.review-request { margin-bottom: 16px; }
+.review-toolbar { margin: 18px 0 13px; }
+.review-toolbar h3, .review-actions h3 { font-size: 17px; }
+.review-editor { gap: 12px; }
+.review-task { padding: 19px 20px; border-radius: 8px; }
+.review-task legend { color: var(--green); }
+.review-field { margin-bottom: 15px; }
+.review-field select { border-color: var(--border-strong); color: var(--ink); }
+.review-field textarea { min-height: 78px; }
+.review-hours { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 0 0 13px; padding: 12px; border: 1px solid var(--border); border-radius: 7px; background: #f7f9f7; }
+.review-hours input { font-size: 16px; font-variant-numeric: tabular-nums; }
+.review-evidence { margin: 18px 0; padding: 16px 0; }
+.review-evidence-card { margin-bottom: 10px; padding: 12px; border-color: var(--border); background: #f8faf8; }
+.review-summary-state { background: #e8f0ea; color: #3d5948; }
+.review-price-range { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.review-price-range > div { margin: 0; padding: 13px; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; }
+.review-price-range > div:last-child { border-right: 0; }
+.review-price-range > div:nth-child(2) { background: #eaf2ec; box-shadow: inset 0 3px 0 var(--green); }
+.review-price-range dd { font-size: 19px; }
+.review-prices > .source-text { margin: 12px 0; }
+.review-validation, .review-error, .review-feedback { margin: 16px 0; padding: 14px 16px; }
+.review-actions { margin-top: 18px; padding: 18px 20px; border: 1px solid #cad8cd; border-radius: 9px; background: #eef4ef; }
+.review-actions > p { margin: 7px 0 13px; }
+.review-history { margin-top: 27px; }
+.review-history > p { margin: 6px 0 14px; }
+.review-history .source-details { margin: 8px 0; background: #fff; }
+.review-history-content { padding: 0 17px 17px; }
+.review-approval-history { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.review-approval-history ol { margin: 0; padding: 0; list-style: none; }
+.review-approval-history li { padding: 11px 15px; border-top: 1px solid var(--border); }
+.review-approval-history li:first-child { border-top: 0; }
+
+.offer-manager { margin-top: 15px; border-color: #cbd8ce; background: #fafcf9; }
+.offer-manager > h3 { font-size: 17px; }
+.offer-manager > p { margin: 4px 0 15px; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 1100px) {
+  .analysis-layout { grid-template-columns: minmax(0, 1fr); }
+  .analysis-summary { position: static; }
+}
+
+@media (max-width: 720px) {
+  .analysis-task { padding: 17px 14px 16px 18px; }
+  .review-task { padding: 17px 14px; }
+  .review-hours { grid-template-columns: 1fr; }
+  .review-summary .review-price-range, .review-history-content .review-price-range, .review-price-range { grid-template-columns: 1fr; }
+  .review-price-range > div { border-right: 0; border-bottom: 1px solid var(--border); }
+  .review-price-range > div:last-child { border-bottom: 0; }
+  .review-actions { padding: 16px 14px; }
+}
