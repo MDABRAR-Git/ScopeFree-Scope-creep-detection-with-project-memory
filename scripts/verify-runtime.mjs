@@ -32,7 +32,7 @@ let intakeCreated = false;
 try {
   await pool.query('DELETE FROM "LoginThrottle"');
   await start();
-  const login = await post('/api/auth/login', { password: process.env.TEST_PASSWORD }); assert.equal(login.status, 200);
+  const login = await post('/api/auth/login', { email: process.env.TEST_EMAIL, password: process.env.TEST_PASSWORD }); assert.equal(login.status, 200);
   const cookie = login.headers.get('set-cookie').split(';')[0];
   const create = await post('/api/projects', { name: 'Restart verification' }, cookie); assert.equal(create.status, 201);
   projectId = (await create.json()).project.id;
@@ -79,11 +79,11 @@ try {
   const missingAI = await post(`/api/requests/${anotherId}/analyze`, { idempotencyKey: randomUUID() }, cookie); assert.equal(missingAI.status, 503); assert.equal((await missingAI.json()).error.code, 'AI_NOT_CONFIGURED');
   assert.equal((await pool.query('SELECT COUNT(*)::int n FROM "Estimate" WHERE "requestId"=$1', [anotherId])).rows[0].n, 0);
   console.log('PASS: missing AI configuration fails explicitly without a saved estimate or substitute output.');
-  await stop(); await start({ FREELANCER_PASSWORD_HASH: '' });
-  const unconfigured = await post('/api/auth/login', { password: process.env.TEST_PASSWORD }); assert.equal(unconfigured.status, 503); assert.equal((await unconfigured.json()).error.code, 'AUTH_NOT_CONFIGURED');
-  console.log('PASS: missing password configuration fails explicitly without a session.');
+  await stop(); await start({ SESSION_SECRET: '' });
+  const unconfigured = await post('/api/auth/login', { email: process.env.TEST_EMAIL, password: process.env.TEST_PASSWORD }); assert.equal(unconfigured.status, 503); assert.equal((await unconfigured.json()).error.code, 'AUTH_NOT_CONFIGURED');
+  console.log('PASS: missing session configuration fails explicitly without a session.');
   await stop(); await start({ DATABASE_URL: 'postgresql://invalid:invalid@127.0.0.1:59999/scopefree_test' });
-  const unavailable = await post('/api/auth/login', { password: process.env.TEST_PASSWORD }); assert.equal(unavailable.status, 503); assert.equal((await unavailable.json()).error.code, 'DATABASE_ERROR');
+  const unavailable = await post('/api/auth/login', { email: process.env.TEST_EMAIL, password: process.env.TEST_PASSWORD }); assert.equal(unavailable.status, 503); assert.equal((await unavailable.json()).error.code, 'DATABASE_ERROR');
   console.log('PASS: database connection failure returns a safe, retryable 503.');
 } finally {
   await stop();

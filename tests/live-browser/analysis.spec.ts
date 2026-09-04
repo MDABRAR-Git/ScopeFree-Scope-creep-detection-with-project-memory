@@ -7,7 +7,7 @@ test('real Featherless analysis, review, client acceptance and subsequent agreed
   const pool=new pg.Pool({connectionString:process.env.DATABASE_URL});
   try { await pool.query('DELETE FROM "LoginThrottle"'); } finally { await pool.end(); }
   const origin='http://localhost:3300';
-  await page.goto('/login');await page.getByLabel('Workspace password').fill(process.env.TEST_PASSWORD!);await page.getByRole('button',{name:'Open workspace'}).click();await expect(page.getByRole('heading',{name:'Your projects',exact:true})).toBeVisible();
+  await page.goto('/login');await page.getByLabel('Email address').fill(process.env.TEST_EMAIL!);await page.getByLabel('Password').fill(process.env.TEST_PASSWORD!);await page.getByRole('button',{name:'Sign in'}).click();await expect(page.getByRole('heading',{name:'Your projects',exact:true})).toBeVisible();
   await page.getByLabel('Project name',{exact:true}).fill(`Live verification ${randomUUID().slice(0,8)}`);await page.getByRole('button',{name:'Create project'}).click();
   await page.getByRole('link',{name:'Baseline',exact:true}).click();
   await page.getByLabel('Agreement text',{exact:true}).fill('Build exactly five responsive website pages.\n\nInclude a contact form with name, email and message fields, required-field validation and delivery to one supplied inbox.\n\nCustomer accounts, login and password reset are explicitly excluded.');

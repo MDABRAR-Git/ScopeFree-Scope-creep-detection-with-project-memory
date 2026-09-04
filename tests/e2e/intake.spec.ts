@@ -7,7 +7,7 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const headers = { Origin: origin };
 const requestData = { text: "Add a searchable portfolio page for completed projects.", hourlyRatePaise: 123456 };
 async function authenticated(request: APIRequestContext) {
-  const response = await request.post("/api/auth/login", { headers, data: { password: process.env.TEST_PASSWORD } });
+  const response = await request.post("/api/auth/login", { headers, data: { email: process.env.TEST_EMAIL, password: process.env.TEST_PASSWORD } });
   expect(response.status()).toBe(200);
   return { ...headers, Cookie: response.headers()["set-cookie"].split(";")[0] };
 }
@@ -112,7 +112,7 @@ test("desktop and mobile paste, clause review, confirmation, request save and re
   test.setTimeout(60_000);
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport); await page.goto("/login");
-    await page.getByLabel("Workspace password").fill(process.env.TEST_PASSWORD!); await page.getByLabel("Workspace password").press("Enter");
+    await page.getByLabel("Email address").fill(process.env.TEST_EMAIL!); await page.getByLabel("Password").fill(process.env.TEST_PASSWORD!); await page.getByLabel("Password").press("Enter");
     await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
     await page.getByLabel("Project name", { exact: true }).fill(`Milestone 2 flow ${viewport.width} ${randomUUID().slice(0, 6)}`); await page.getByRole("button", { name: "Create project" }).click();
     await page.getByRole("link", { name: "Requests", exact: true }).click(); await expect(page.getByRole("heading", { name: "Start with the original agreement" })).toBeVisible();
@@ -149,7 +149,7 @@ test("desktop and mobile paste, clause review, confirmation, request save and re
 });
 
 test("browser upload failure preserves pasted text and valid DOCX opens editable preview", async ({ page }) => {
-  await page.goto("/login"); await page.getByLabel("Workspace password").fill(process.env.TEST_PASSWORD!); await page.getByRole("button", { name: "Open workspace" }).click();
+  await page.goto("/login"); await page.getByLabel("Email address").fill(process.env.TEST_EMAIL!); await page.getByLabel("Password").fill(process.env.TEST_PASSWORD!); await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByLabel("Project name", { exact: true }).fill(`Upload browser ${randomUUID().slice(0, 6)}`); await page.getByRole("button", { name: "Create project" }).click();
   await page.getByRole("link", { name: "Baseline", exact: true }).click(); await page.getByLabel("Agreement text", { exact: true }).fill("Existing input must survive an extraction failure.");
   await page.getByLabel("Choose agreement file").setInputFiles({ name: "broken.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-broken") });

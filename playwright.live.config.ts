@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const live = dotenv.parse(readFileSync('.env'));
 dotenv.config({ path: '.env.test', override: true, quiet: true });
 if (!process.env.DATABASE_URL || !new URL(process.env.DATABASE_URL).pathname.endsWith('_test')) throw new Error('Live browser verification requires the isolated test database.');
+if (!process.env.TEST_EMAIL || !process.env.TEST_PASSWORD) throw new Error('TEST_EMAIL and TEST_PASSWORD are required for live browser verification.');
 if (!live.AI_API_KEY || !live.AI_MODEL) throw new Error('Live AI configuration is required.');
 const env: Record<string,string> = { APP_ORIGIN: 'http://localhost:3300' };
 for (const [key,value] of Object.entries(live)) if (key.startsWith('AI_')) env[key] = value;

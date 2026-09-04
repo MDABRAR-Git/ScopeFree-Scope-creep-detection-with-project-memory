@@ -7,7 +7,7 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const headers = { Origin: origin };
 async function resetThrottle() { await pool.query('DELETE FROM "LoginThrottle"'); }
 async function login(request: APIRequestContext) {
-  const response = await request.post("/api/auth/login", { headers, data: { password } });
+  const response = await request.post("/api/auth/login", { headers, data: { email: process.env.TEST_EMAIL, password } });
   expect(response.status()).toBe(200);
   const cookie = response.headers()["set-cookie"].split(";")[0];
   return { cookie, response };
@@ -20,7 +20,8 @@ test("initial migration enforces foreign keys and one baseline per project", asy
   try {
     await client.query("BEGIN");
     const projectId = randomUUID();
-    await client.query('INSERT INTO "Project" ("id", "name") VALUES ($1, $2)', [projectId, "Migration constraint check"]);
+    const ownerId = (await client.query('SELECT "id" FROM "User" WHERE "email"=$1', [process.env.TEST_EMAIL])).rows[0].id;
+    await client.query('INSERT INTO "Project" ("id", "name", "ownerId") VALUES ($1, $2, $3)', [projectId, "Migration constraint check", ownerId]);
     const sql = 'INSERT INTO "Baseline" ("id", "projectId", "text", "clausesJson", "contentHash", "confirmedAt", "confirmedBy") VALUES ($1, $2, $3, $4, $5, NOW(), $6)';
     const values = [randomUUID(), projectId, "Test fixture", JSON.stringify({ schemaVersion: 1, clauses: [] }), "test-hash", "test"];
     await client.query(sql, values);
@@ -29,6 +30,36 @@ test("initial migration enforces foreign keys and one baseline per project", asy
     await client.query("ROLLBACK TO SAVEPOINT duplicate_check");
     await expect(client.query(sql, [randomUUID(), randomUUID(), ...values.slice(2)])).rejects.toMatchObject({ code: "23503" });
   } finally { await client.query("ROLLBACK"); client.release(); }
+});
+
+test("registration creates an isolated account and email/password login restores it", async ({ request, playwright }) => {
+  const email = `owner-${randomUUID()}@example.com`, accountPassword = "correct-horse-8291";
+  const account = await playwright.request.newContext({ baseURL: origin });
+  try {
+    const registered = await account.post("/api/auth/register", { headers, data: { email: email.toUpperCase(), password: accountPassword, confirmPassword: accountPassword } });
+    expect(registered.status()).toBe(201); expect((await registered.json()).user.email).toBe(email);
+    const own = await account.post("/api/projects", { headers, data: { name: "Second owner private project" } }); expect(own.status()).toBe(201); const ownId = (await own.json()).project.id;
+    await account.post("/api/auth/logout", { headers });
+    expect((await account.get(`/api/projects/${ownId}`)).status()).toBe(401);
+    expect((await account.post("/api/auth/login", { headers, data: { email, password: accountPassword } })).status()).toBe(200);
+    expect((await account.get(`/api/projects/${ownId}`)).status()).toBe(200);
+    expect((await account.post("/api/auth/register", { headers, data: { email, password: accountPassword, confirmPassword: accountPassword } })).status()).toBe(409);
+    const primary = await login(request), created = await request.post("/api/projects", { headers: { ...headers, Cookie: primary.cookie }, data: { name: "Primary owner private project" } });
+    const primaryId = (await created.json()).project.id;
+    expect((await account.get(`/api/projects/${primaryId}`)).status()).toBe(404);
+    expect((await request.get(`/api/projects/${ownId}`, { headers: { Cookie: primary.cookie } })).status()).toBe(404);
+    const accountProjects = (await (await account.get("/api/projects")).json()).projects.map((p: {id:string}) => p.id);
+    expect(accountProjects).toContain(ownId); expect(accountProjects).not.toContain(primaryId);
+  } finally { await account.dispose(); }
+});
+
+test("desktop registration option creates a session and supports later sign-in", async ({ page }) => {
+  const email = `browser-${randomUUID()}@example.com`, accountPassword = "browser-password-491";
+  await page.goto("/login"); await page.getByRole("tab", { name: "Create account" }).click();
+  await page.getByLabel("Email address").fill(email); await page.getByLabel("Password", { exact: true }).fill(accountPassword); await page.getByLabel("Confirm password").fill(accountPassword);
+  await page.getByRole("button", { name: "Create account", exact: true }).click(); await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
+  await page.getByRole("button", { name: "Log out" }).click(); await page.getByLabel("Email address").fill(email); await page.getByLabel("Password", { exact: true }).fill(accountPassword);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click(); await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
 });
 
 test("workspace pages and all project APIs require access", async ({ request, page }) => {
@@ -42,7 +73,7 @@ test("workspace pages and all project APIs require access", async ({ request, pa
 });
 
 test("login errors, safe cookies, tampering, expiry and logout revocation", async ({ request, playwright }) => {
-  const bad = await request.post("/api/auth/login", { headers, data: { password: "wrong" } }); expect(bad.status()).toBe(401);
+  const bad = await request.post("/api/auth/login", { headers, data: { email: process.env.TEST_EMAIL, password: "wrong" } }); expect(bad.status()).toBe(401);
   expect((await bad.json()).error.code).toBe("INVALID_CREDENTIALS");
   const { cookie, response } = await login(request);
   const lifetime = await pool.query('SELECT EXTRACT(EPOCH FROM ("expiresAt" - NOW()))::float AS seconds FROM "WorkspaceSession" ORDER BY "createdAt" DESC LIMIT 1');
@@ -63,7 +94,7 @@ test("login errors, safe cookies, tampering, expiry and logout revocation", asyn
 test("mutations reject absent, foreign, and spoofed origins; GET never mutates", async ({ request }) => {
   const origins: Record<string, string>[] = [{}, { Origin: "https://evil.example" }, { Origin: origin, "Sec-Fetch-Site": "cross-site" }];
   for (const originHeader of origins) {
-    expect((await request.post("/api/auth/login", { headers: originHeader, data: { password } })).status()).toBe(403);
+    expect((await request.post("/api/auth/login", { headers: originHeader, data: { email: process.env.TEST_EMAIL, password } })).status()).toBe(403);
   }
   const { cookie } = await login(request);
   for (const route of ["/api/projects", "/api/auth/logout"]) expect((await request.post(route, { headers: { Origin: "https://evil.example", Cookie: cookie }, data: { name: "Blocked" } })).status()).toBe(403);
@@ -74,12 +105,12 @@ test("mutations reject absent, foreign, and spoofed origins; GET never mutates",
 
 test("login throttling is atomic, shared, and expires", async ({ playwright }) => {
   const contexts = await Promise.all(Array.from({ length: 11 }, () => playwright.request.newContext({ baseURL: origin })));
-  const results = await Promise.all(contexts.map(ctx => ctx.post("/api/auth/login", { headers: { ...headers, "X-Forwarded-For": randomUUID() }, data: { password: "wrong" } })));
+  const results = await Promise.all(contexts.map(ctx => ctx.post("/api/auth/login", { headers: { ...headers, "X-Forwarded-For": randomUUID() }, data: { email: process.env.TEST_EMAIL, password: "wrong" } })));
   expect(results.filter(r => r.status() === 401)).toHaveLength(10); expect(results.filter(r => r.status() === 429)).toHaveLength(1);
-  const blocked = await contexts[0].post("/api/auth/login", { headers, data: { password } });
+  const blocked = await contexts[0].post("/api/auth/login", { headers, data: { email: process.env.TEST_EMAIL, password } });
   expect(blocked.status()).toBe(429); expect(Number(blocked.headers()["retry-after"])).toBeGreaterThan(0); expect(Number(blocked.headers()["retry-after"])).toBeLessThanOrEqual(900);
   await pool.query('UPDATE "LoginThrottle" SET "windowStart" = NOW() - INTERVAL \'16 minutes\'');
-  expect((await contexts[0].post("/api/auth/login", { headers, data: { password } })).status()).toBe(200);
+  expect((await contexts[0].post("/api/auth/login", { headers, data: { email: process.env.TEST_EMAIL, password } })).status()).toBe(200);
   await Promise.all(contexts.map(c => c.dispose()));
 });
 
@@ -100,10 +131,10 @@ test("project validation, database persistence, audit, IDs and safe text", async
 test("desktop and mobile login, project creation, refresh, keyboard, and logout", async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport); await page.goto("/login");
-    await expect(page.getByRole("heading", { name: "Welcome back." })).toBeVisible();
-    await page.getByLabel("Workspace password").fill("wrong"); await page.getByRole("button", { name: "Open workspace" }).click();
+    await expect(page.getByRole("heading", { name: "Your workspace." })).toBeVisible();
+    await page.getByLabel("Email address").fill(process.env.TEST_EMAIL!); await page.getByLabel("Password").fill("wrong"); await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page.getByRole("alert").filter({ hasText: "incorrect" })).toBeVisible();
-    await page.getByLabel("Workspace password").fill(password); await page.getByLabel("Workspace password").press("Enter");
+    await page.getByLabel("Email address").fill(process.env.TEST_EMAIL!); await page.getByLabel("Password").fill(password); await page.getByLabel("Password").press("Enter");
     await expect(page.getByRole("heading", { name: "Your projects" })).toBeVisible();
     const name = `Browser check ${viewport.width} ${randomUUID().slice(0, 8)}`;
     await page.getByLabel("Project name", { exact: true }).fill(name); await page.getByRole("button", { name: "Create project" }).click();

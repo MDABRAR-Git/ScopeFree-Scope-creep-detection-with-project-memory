@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { authConfig, checkOrigin } from "../src/server/auth";
-// Test-only configuration fixture; password verification itself is exercised against Argon2 in browser tests.
-const hash = "$argon2id$v=19$m=65536,t=3,p=1$test$fixture";
-beforeEach(() => { vi.stubEnv("FREELANCER_PASSWORD_HASH", Buffer.from(hash).toString("base64")); vi.stubEnv("SESSION_SECRET", "test-only-session-secret-with-over-32-characters"); vi.stubEnv("APP_ORIGIN", "https://workspace.example"); });
+import { authConfig, checkOrigin, loginInputSchema, registrationInputSchema } from "../src/server/auth";
+beforeEach(() => { vi.stubEnv("SESSION_SECRET", "test-only-session-secret-with-over-32-characters"); vi.stubEnv("APP_ORIGIN", "https://workspace.example"); });
 afterEach(() => vi.unstubAllEnvs());
-it("decodes the env-safe hash without changing credential identity", () => { expect(authConfig().passwordHash).toBe(hash); const version = authConfig().credentialVersion; vi.stubEnv("FREELANCER_PASSWORD_HASH", hash); expect(authConfig().credentialVersion).toBe(version); });
-it("requires a configured hash, sufficiently long secret and exact HTTP(S) origin", () => {
-  for (const [key, value] of [["FREELANCER_PASSWORD_HASH", ""], ["SESSION_SECRET", "short"], ["APP_ORIGIN", "https://workspace.example/path"]]) {
+it("normalizes account emails and validates registration passwords", () => {
+  expect(loginInputSchema.parse({ email: " USER@Example.COM ", password: "password" }).email).toBe("user@example.com");
+  expect(() => registrationInputSchema.parse({ email: "user@example.com", password: "short", confirmPassword: "short" })).toThrow();
+  expect(() => registrationInputSchema.parse({ email: "user@example.com", password: "long-enough", confirmPassword: "different" })).toThrow();
+});
+it("requires a sufficiently long secret and exact HTTP(S) origin", () => {
+  for (const [key, value] of [["SESSION_SECRET", "short"], ["APP_ORIGIN", "https://workspace.example/path"]]) {
     const original = process.env[key]; vi.stubEnv(key, value); expect(authConfig).toThrow(expect.objectContaining({ code: "AUTH_NOT_CONFIGURED" })); vi.stubEnv(key, original);
   }
 });

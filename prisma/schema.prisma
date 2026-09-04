@@ -18,6 +18,18 @@ model Project {
   decisions     ProjectDecision[]
   auditEvents   AuditEvent[]
   intakeLinks   ClientIntakeLink[]
+  ownerId       String?  @db.Uuid
+  owner         User?    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  @@index([ownerId, createdAt])
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  projects     Project[]
+  sessions     WorkspaceSession[]
 }
 
 model Baseline {
@@ -194,7 +206,10 @@ model WorkspaceSession {
   credentialVersion String
   expiresAt         DateTime @db.Timestamptz(3)
   createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  userId            String   @db.Uuid
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([expiresAt])
+  @@index([userId, expiresAt])
 }
 
 model LoginThrottle {

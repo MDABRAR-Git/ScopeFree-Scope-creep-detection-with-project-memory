@@ -9,7 +9,7 @@ const origin = "http://localhost:3100", headers = { Origin: origin };
 test.beforeEach(async () => { await pool.query('DELETE FROM "LoginThrottle"'); });
 test.afterAll(async () => { await pool.end(); });
 async function setup(request: APIRequestContext) {
-  expect((await request.post('/api/auth/login', { headers, data: { password: process.env.TEST_PASSWORD } })).status()).toBe(200);
+  expect((await request.post('/api/auth/login', { headers, data: { email: process.env.TEST_EMAIL, password: process.env.TEST_PASSWORD } })).status()).toBe(200);
   const projectId = (await (await request.post('/api/projects', { headers, data: { name: `Review ${randomUUID().slice(0, 8)}` } })).json()).project.id;
   expect((await request.post(`/api/projects/${projectId}/baseline`, { headers, data: baselineInput() })).status()).toBe(201);
   const saved = (await (await request.post(`/api/projects/${projectId}/requests`, { headers, data: { text: 'Add another responsive website page.', hourlyRatePaise: 100000 } })).json()).request;
@@ -196,7 +196,7 @@ test('desktop/mobile review recalculates, validates, saves, approves, reopens an
     const { projectId, estimate } = await setup(request);
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
     await page.goto('/login');
-    if (await page.getByLabel('Workspace password').isVisible()) { await page.getByLabel('Workspace password').fill(process.env.TEST_PASSWORD!); await page.getByLabel('Workspace password').press('Enter'); await expect(page.getByRole('heading', { name: 'Your projects', exact: true })).toBeVisible(); }
+    if (await page.getByLabel('Password').isVisible()) { await page.getByLabel('Email address').fill(process.env.TEST_EMAIL!);await page.getByLabel('Password').fill(process.env.TEST_PASSWORD!); await page.getByLabel('Password').press('Enter'); await expect(page.getByRole('heading', { name: 'Your projects', exact: true })).toBeVisible(); }
     await page.goto(`/projects/${projectId}/estimates/${estimate.id}`);
     await page.getByRole('button', { name: 'Edit review', exact: true }).click();
     await expect(page.getByLabel('Task 1 title', { exact: true })).toBeFocused();

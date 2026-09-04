@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const projectIdSchema = z.uuid();
 export const projectInputSchema = z.strictObject({ name: z.string().trim().min(1, "Enter a project name.").max(120, "Use 120 characters or fewer.") });
-export const loginInputSchema = z.strictObject({ password: z.string().min(1, "Enter your password.").max(256, "Password is too long.") });
 const text = z.string().trim().min(1).max(2000);
 const strings = z.array(text).max(20);
 const hoursValue = z.number().min(0).max(200).multipleOf(0.25);
@@ -30,7 +29,7 @@ export const chatOutputSchema = z.strictObject({ answer: z.string().trim().min(1
 export type AnalysisOutput = z.infer<typeof analysisOutputSchema>;
 
 export const errorCodes = [
-  "RATE_REQUIRED", "IDEMPOTENCY_CONFLICT", "CLIENT_RATE_LIMITED", "AGREEMENT_REQUIRED", "INVALID_LINK",
+  "RATE_REQUIRED", "IDEMPOTENCY_CONFLICT", "CLIENT_RATE_LIMITED", "AGREEMENT_REQUIRED", "INVALID_LINK", "EMAIL_ALREADY_REGISTERED",
   "ESTIMATE_LOCKED", "EDIT_REASON_REQUIRED", "ANALYSIS_IN_PROGRESS", "ANALYSIS_RATE_LIMITED",
   "UNAUTHORIZED", "INVALID_CREDENTIALS", "AUTH_NOT_CONFIGURED", "FORBIDDEN_ORIGIN", "LOGIN_RATE_LIMITED", "INVALID_INPUT", "INPUT_TOO_LARGE", "NOT_FOUND", "DATABASE_ERROR", "INTERNAL_ERROR",
   "BASELINE_REQUIRED", "BASELINE_INVALID", "BASELINE_ALREADY_CONFIRMED", "UNSUPPORTED_FILE", "EXTRACTION_FAILED", "AI_NOT_CONFIGURED", "AI_UNAVAILABLE", "AI_RATE_LIMITED", "AI_TIMEOUT", "AI_OUTPUT_INVALID", "INVALID_ESTIMATE", "UNCERTAIN_TASKS", "STALE_REVISION", "BASELINE_CHANGED", "LINK_EXPIRED", "LINK_REVOKED", "ALREADY_DECIDED", "CONTEXT_TOO_LARGE",

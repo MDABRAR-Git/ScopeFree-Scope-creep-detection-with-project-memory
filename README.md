@@ -2,7 +2,7 @@
 
 A standalone workspace for keeping project agreements and scope changes connected. Foundation, access, baseline/request intake, live analysis, review/pricing/history and Milestone 5 client requests/offers/decisions are implemented. See the milestone verification records for actual live results and limitations. The source documents describe the full intended application; they are not claims that all features are built.
 
-Available now: password login/logout, private projects, original-agreement paste/upload and clause confirmation, saved client requests with INR hourly rates, live scope analysis with validated citations, immutable original estimates/initial revisions and PostgreSQL persistence. Editable reviews, deterministic price ranges, internal approval, Request History, Additional Requests and billing summaries are included. Client submission links, approved offers, acceptance/decline and accepted scope amendments are included. Project Memory browsing and chatbot remain later milestones and inactive. There is no runtime demo or seeded project content.
+Available now: email/password registration and login/logout, user-owned private projects, original-agreement paste/upload and clause confirmation, saved client requests with INR hourly rates, live scope analysis with validated citations, immutable original estimates/initial revisions and PostgreSQL persistence. Editable reviews, deterministic price ranges, internal approval, Request History, Additional Requests and billing summaries are included. Client submission links, approved offers, acceptance/decline and accepted scope amendments are included. Project Memory browsing and chatbot remain later milestones and inactive. There is no runtime demo or seeded project content.
 
 The current application, including Milestone 5, is on `abrar-dev`. Clone that branch explicitly:
 
@@ -16,17 +16,17 @@ Per the user's September 4, 2026 correction, all future work is completed, teste
 
 - Node.js 22.13+ or 24 LTS and npm.
 - PostgreSQL 18, locally installed or through Docker.
-- A workspace password and a randomly generated session secret. No signup or accounts.
+- An email address for registration and a randomly generated session secret.
 
 ## Local setup
 
 1. Run `npm ci` in this repository.
 2. Copy `.env.example` to `.env` (ignored by Git).
 3. Create a PostgreSQL database/user and set `DATABASE_URL`. For Docker, add a strong `POSTGRES_PASSWORD` to `.env`, use the same password in `DATABASE_URL`, then run `docker compose up -d db`. Percent-encode special characters inside a connection URL.
-4. Run `npm run password:hash` in an interactive terminal. It masks your entry and outputs a base64-encoded Argon2id hash. Put that value in `FREELANCER_PASSWORD_HASH` in `.env`, in quotes. Base64 prevents Next.js from interpreting dollar signs in an Argon2 hash as environment references; it is not encryption. Plaintext passwords are never sent to AI or stored by the application.
-5. Generate a session secret with `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"` and put it in `SESSION_SECRET`. Keep both values server-side.
+4. Generate a session secret with `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"` and put it in `SESSION_SECRET`.
+5. Keep `SESSION_SECRET` and all other credentials server-side.
 6. Set `APP_ORIGIN` to the exact origin you will open, for example `http://localhost:3000`, without a trailing slash. Opening a different hostname causes mutation requests to be rejected.
-7. Run `npm run db:migrate`, then `npm run dev`. Open [ScopeFree locally](http://localhost:3000). Use the configured password and create a project.
+7. Run `npm run db:migrate`, then `npm run dev`. Open [ScopeFree locally](http://localhost:3000), choose **Create account**, and register with your email and a password of at least eight characters. The first account after upgrading claims preserved pre-account projects.
 
 For production compilation locally: `npm run build`, followed by `npm start`. Production cookies always use Secure; localhost is a browser development exception. A real deployment requires HTTPS and the corresponding `APP_ORIGIN`. This milestone does not deploy anything.
 
@@ -36,10 +36,10 @@ With PostgreSQL 18 already installed, run `./scripts/local-postgres.ps1` in Powe
 
 ## Access and storage
 
-- Argon2id verifies the configured password; iron-session seals the cookie. The HttpOnly, SameSite=Lax cookie expires after eight hours and is Secure in production. Server session records enforce expiry and immediate logout revocation, including replayed cookies. Changing the password hash invalidates existing sessions; changing the session secret invalidates cookie seals. Restart after environment changes.
+- Argon2id hashes and verifies each account password in PostgreSQL; iron-session seals the cookie. The HttpOnly, SameSite=Lax cookie expires after eight hours and is Secure in production. Server session records enforce expiry and immediate logout revocation, including replayed cookies. Sessions are bound to one user and the current password hash; changing the session secret invalidates cookie seals. Restart after environment changes.
 - All implemented workspace pages and project API routes enforce sessions. Mutations (including login) require an exact trusted `Origin`; cross-site fetches are rejected. No GET handler changes state.
 - Login allows ten attempts per 15-minute window, persisted atomically in PostgreSQL. This single-freelancer global limit deliberately does not trust IP/proxy headers. Successful attempts also count; the window does not slide. After the limit, even a valid login must wait. An attacker can temporarily exhaust this budget; a public deployment should add an edge limiter appropriate to its trusted proxy.
-- Project names are trimmed, required and limited to 120 characters. Extra client fields are rejected. JSON request bodies are size-bounded. Projects use UUIDs and record a creation audit event atomically. One freelancer owns the whole workspace; project IDs are resource identifiers, not access credentials.
+- Project names are trimmed, required and limited to 120 characters. Extra client fields are rejected. JSON request bodies are size-bounded. Projects use UUIDs and record a creation audit event atomically. Each project has one immutable user owner; project IDs are resource identifiers, not access credentials.
 - Migrations establish the relational models and session/throttling tables. Original baselines, AI estimate originals and saved revisions are protected at database level. Milestone 3 validates analysis evidence membership. Milestone 4 adds saved-revision approval with ownership checks and audit history. Milestone 5 protects frozen offers and final decisions, and serializes acceptance with review/correction and scope changes. JSON contracts are schema-versioned; timestamps use timestamp-with-time-zone columns, and application database connections explicitly use UTC independent of the database host's timezone.
 - API failures use `{error:{code,message,fields?,retryable}}` and `Cache-Control: no-store`. Raw provider/database errors, prompts, passwords, and session cookies are not included. Text is escaped by React. Public client APIs require a separate resource-scoped bearer token and serialize only approved client-facing content.
 
@@ -62,13 +62,13 @@ After `git fetch origin --prune`, run `npm run verify:repository` to check Git o
 Browser/runtime verification uses a **separate disposable database whose name ends in `_test`**:
 
 1. Create that database in PostgreSQL.
-2. Create ignored `.env.test` with its `DATABASE_URL`, `APP_ORIGIN=http://localhost:3100`, a separate `SESSION_SECRET`, and a base64-encoded `FREELANCER_PASSWORD_HASH` from the hash helper plus matching plaintext `TEST_PASSWORD` for test login only. Do not use real credentials for automated tests.
+2. Create ignored `.env.test` with its `DATABASE_URL`, `APP_ORIGIN=http://localhost:3100`, a separate `SESSION_SECRET`, `TEST_EMAIL`, and `TEST_PASSWORD` for test login only. Do not use real credentials for automated tests.
 3. Run `npx playwright install chromium`, then `npm run test:e2e`. The script applies migrations, launches the actual production build on port 3100, and checks access boundaries and desktop/mobile flows. It creates test projects and modifies session/throttle records in that test database only. Test screenshots are ignored under `test-results`.
 4. Run `npm run test:runtime` for production restart persistence, absent auth configuration and database-outage checks. It uses port 3200 and the same test database. Do not run this simultaneously with browser tests.
 
-Manual check: open the login page → enter a wrong password and inspect the error → log in → create a project → reload its overview → return to All projects → log out → open `/projects` and confirm login is required. Check at narrow/mobile width too. Stop/restart the application, log in again and confirm your project remains.
+Manual check: open the login page → register a new account → log out → enter a wrong email/password and inspect the error → log in again → create a project → reload its overview → return to All projects → log out → open `/projects` and confirm login is required. Check at narrow/mobile width too. Stop/restart the application, log in again and confirm your project remains.
 
-See the [Milestone 1](docs/milestone-1.md), [Milestone 2](docs/milestone-2.md), [Milestone 3](docs/milestone-3.md), [Milestone 4](docs/milestone-4.md) and [Milestone 5](docs/milestone-5.md) verification records for observed results and limitations. The imported [SPEC.md](SPEC.md), [AGENTS.md](AGENTS.md) and [TASKS.md](TASKS.md) preserve the handoff; their full-project checkboxes intentionally remain unchecked.
+See [the user-account amendment](docs/user-accounts.md), the [Milestone 1](docs/milestone-1.md), [Milestone 2](docs/milestone-2.md), [Milestone 3](docs/milestone-3.md), [Milestone 4](docs/milestone-4.md) and [Milestone 5](docs/milestone-5.md) verification records for observed results and limitations. The imported [SPEC.md](SPEC.md), [AGENTS.md](AGENTS.md) and [TASKS.md](TASKS.md) preserve the handoff; their full-project checkboxes intentionally remain unchecked.
 
 ## Baseline and request intake
 
@@ -152,6 +152,6 @@ Use **Revoke offer and edit** to correct a pending offer. Revocation clears appr
 
 Links contain a 32-byte random secret in the URL fragment (`#token=…`). Only its SHA-256 hash is stored. Browser API calls send the secret in Authorization headers to token-free paths; client pages use no-store and no-referrer, and do not store tokens in local/session storage. Keep the complete link private: possession grants access, not verified identity. Configure `CLIENT_INTAKE_LINK_DAYS` (default 30) and `PROPOSAL_LINK_DAYS` (default 7), each an integer from 1 to 90; restart after environment changes. Rotate or revoke access explicitly. Finalized offers cannot be rotated, and expired links cannot authorize decisions.
 
-Raw links are returned once and are not recoverable from the database. If a response is lost, retry safely with the same idempotency key, then rotate access to obtain a fresh link if needed. Reusing a key with different inputs returns a conflict. Share links manually; there are no automatic notifications, accounts or payments.
+Raw links are returned once and are not recoverable from the database. If a response is lost, retry safely with the same idempotency key, then rotate access to obtain a fresh link if needed. Reusing a key with different inputs returns a conflict. Share links manually; there are no automatic notifications or payments.
 
 Migration `202609040005_client_workflow` upgrades Milestone 4 in place and also applies on a fresh database. Run `npm run db:migrate` and rebuild after updating. Historical originals and revision formats remain readable; older reviews without agreement terms require an explicit new save/approval before sharing. See [the Milestone 5 report](docs/milestone-5.md) for verification and limitations.

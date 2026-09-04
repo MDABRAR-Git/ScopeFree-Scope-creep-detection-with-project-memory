@@ -9,7 +9,7 @@ const origin="http://localhost:3100",headers={Origin:origin};
 test.beforeEach(async()=>{await pool.query('DELETE FROM "LoginThrottle"');});
 test.afterAll(async()=>{await pool.end();});
 async function workspace(request:APIRequestContext){
-  expect((await request.post('/api/auth/login',{headers,data:{password:process.env.TEST_PASSWORD}})).status()).toBe(200);
+  expect((await request.post('/api/auth/login',{headers,data:{email:process.env.TEST_EMAIL,password:process.env.TEST_PASSWORD}})).status()).toBe(200);
   const projectId=(await (await request.post('/api/projects',{headers,data:{name:`Client workflow ${randomUUID().slice(0,8)}`}})).json()).project.id;
   expect((await request.post(`/api/projects/${projectId}/baseline`,{headers,data:baselineInput()})).status()).toBe(201);
   return projectId;

@@ -6,9 +6,9 @@ import { requirePageSession } from "@/server/auth";
 import { getProject } from "@/server/projects";
 import { AppError } from "@/server/errors";
 export default async function ProjectLayout({ params, children }: { params: Promise<{ projectId: string }>; children: React.ReactNode }) {
-  await requirePageSession();
+  const session = await requirePageSession();
   const { projectId } = await params;
-  const project = await getProject(projectId).catch(error => { if (error instanceof AppError && error.code === "NOT_FOUND") notFound(); throw error; });
+  const project = await getProject(projectId, session.userId).catch(error => { if (error instanceof AppError && error.code === "NOT_FOUND") notFound(); throw error; });
   return <>
     <div className="breadcrumb"><Link href="/projects">Projects</Link><span>/</span><span className="breadcrumb-project">{project.name}</span></div>
     <Link href="/projects" className="back-link"><ArrowLeft size={15} aria-hidden="true" />All projects</Link>

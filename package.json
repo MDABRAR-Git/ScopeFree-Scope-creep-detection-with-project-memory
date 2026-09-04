@@ -12,14 +12,15 @@
     "test": "vitest run",
     "pretest:e2e": "node scripts/migrate-test-db.mjs",
     "test:e2e": "playwright test",
+    "pretest:runtime": "node scripts/migrate-test-db.mjs",
     "test:runtime": "node scripts/verify-runtime.mjs",
     "test:live": "node scripts/run-live-evaluation.mjs",
+    "pretest:live-browser": "node scripts/migrate-test-db.mjs",
     "test:live-browser": "playwright test --config=playwright.live.config.ts --reporter=line",
     "verify:repository": "node scripts/verify-repository.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:status": "prisma migrate status",
-    "password:hash": "node scripts/hash-password.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

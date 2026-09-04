@@ -4,8 +4,8 @@ import { CreateProjectForm } from "@/components/access-forms";
 import { listProjects } from "@/server/projects";
 import { requirePageSession } from "@/server/auth";
 export default async function ProjectsPage() {
-  await requirePageSession();
-  const projects = await listProjects();
+  const session = await requirePageSession();
+  const projects = await listProjects(session.userId);
   return <><div className="breadcrumb">Workspace <span>/</span> Projects</div><div className="page-heading"><div><p className="eyebrow">ROOM FOR YOUR BEST WORK</p><h1>Your projects</h1><p className="muted">Start with clarity. Keep every project grounded in what you agreed.</p></div><span className="count-badge">{projects.length} {projects.length === 1 ? "project" : "projects"}</span></div>
     <section className="new-project-panel" aria-labelledby="create-title"><div className="panel-intro"><span className="panel-icon"><FolderOpen size={22} aria-hidden="true" /></span><div><h2 id="create-title">A new project starts here</h2><p className="muted">Create a dedicated space for your next piece of work.</p></div></div><CreateProjectForm /></section>
     <section className="project-section" aria-labelledby="projects-title"><div className="section-heading"><h2 id="projects-title">All projects <span>{projects.length}</span></h2><span className="section-caption">Your work, in one place</span></div>

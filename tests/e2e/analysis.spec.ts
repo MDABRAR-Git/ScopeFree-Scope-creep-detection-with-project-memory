@@ -6,7 +6,7 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const origin = "http://localhost:3100";
 const headers = { Origin: origin };
 async function setup(request: APIRequestContext, text = "Add another page to the website.") {
-  const login = await request.post("/api/auth/login", { headers, data: { password: process.env.TEST_PASSWORD } }); expect(login.status()).toBe(200);
+  const login = await request.post("/api/auth/login", { headers, data: { email: process.env.TEST_EMAIL, password: process.env.TEST_PASSWORD } }); expect(login.status()).toBe(200);
   const auth = { ...headers, Cookie: login.headers()["set-cookie"].split(";")[0] };
   const p = await request.post("/api/projects", { headers: auth, data: { name: `Analysis ${randomUUID().slice(0, 8)}` } });
   const projectId = (await p.json()).project.id;
@@ -110,7 +110,7 @@ test("desktop/mobile analysis, evidence navigation, refresh and cross-project pa
   test.setTimeout(60000);
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
     const { auth, requestId, projectId } = await setup(request);
-    await page.setViewportSize(viewport); await page.goto('/login'); await page.getByLabel('Workspace password').fill(process.env.TEST_PASSWORD!); await page.getByLabel('Workspace password').press('Enter');
+    await page.setViewportSize(viewport); await page.goto('/login'); await page.getByLabel('Email address').fill(process.env.TEST_EMAIL!);await page.getByLabel('Password').fill(process.env.TEST_PASSWORD!); await page.getByLabel('Password').press('Enter');
     await expect(page.getByRole('heading', { name: 'Your projects', exact: true })).toBeVisible();
     await page.goto(`/projects/${projectId}/requests`); await page.getByRole('button', { name: 'Analyze Request', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Scope analysis', exact: true })).toBeVisible();
@@ -127,7 +127,7 @@ test("desktop/mobile analysis, evidence navigation, refresh and cross-project pa
 });
 test("browser errors preserve saved requests and offer retry", async ({ request, page }) => {
   const { projectId } = await setup(request, '[OUTAGE] Add another website page.');
-  await page.goto('/login'); await page.getByLabel('Workspace password').fill(process.env.TEST_PASSWORD!); await page.getByRole('button', { name: 'Open workspace' }).click();
+  await page.goto('/login'); await page.getByLabel('Email address').fill(process.env.TEST_EMAIL!);await page.getByLabel('Password').fill(process.env.TEST_PASSWORD!); await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('heading', { name: 'Your projects', exact: true })).toBeVisible();
   await page.goto(`/projects/${projectId}/requests`); await page.getByRole('button', { name: 'Analyze Request', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'AI provider' })).toBeVisible(); await expect(page.getByText('[OUTAGE] Add another website page.', { exact: true })).toBeVisible();
