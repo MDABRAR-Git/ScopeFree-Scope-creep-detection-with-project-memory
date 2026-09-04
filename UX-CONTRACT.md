@@ -111,8 +111,8 @@
 ## Permission and clipboard
 
 - Authenticated routes require the account session; foreign or unknown project records use the existing safe not-found behavior.
-- Client links are shown only when returned and copied only after an explicit button action. Success text never repeats the secret.
-- Unavailable Project AI Chatbot remains visibly disabled with its existing Milestone 7 explanation.
+- Client **request** (intake) links are shown only when returned and copied only after an explicit button action. Success text never repeats the secret. Proposal links are emailed to the client (Milestone 7) and are never shown to the freelancer; the approved offer/send section requires a valid client email and shows Sending / Sent / Failed with a Resend action.
+- The Project AI Chatbot is enabled (Milestone 7): a project-scoped, read-only rail entry with a labelled question field, keyboard submit, loading/empty/error-retry/insufficient-evidence states, clickable server-validated citations and a direct Show All Decisions action. Answers and citations wrap without horizontal overflow at desktop and 390px.
 
 ## Migration status
 

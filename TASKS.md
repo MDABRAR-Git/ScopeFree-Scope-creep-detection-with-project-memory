@@ -1,5 +1,7 @@
 # Implementation checklist — 24 hours, four members
 
+> Milestone 7 + email-delivery amendment (September 5, 2026): proposal sharing now emails the secure link to a validated client address (provider-neutral server-only adapter; honest Sending/Sent/Failed with Resend/Retry; `EMAIL_NOT_CONFIGURED`/retryable outage errors; no runtime fixture fallback), replacing the manual copy-link UI while keeping the account-free token portal. Milestone 7 implements the read-only Project AI Chatbot: application-owned retrieval, server-validated citations, one bounded repair, insufficient-evidence and `CONTEXT_TOO_LARGE` handling, deterministic complete Show All Decisions, and no chat mutations. See `docs/milestone-7.md`. Supersedes older manual-share text and the "chatbot remains Milestone 7" notes. `abrar-dev`-only; no deployment.
+
 > Milestone 6 implementation amendment (September 5, 2026): the read-only Project Memory list, complete search/status filters, immutable decision detail, offer history, supersession links, source navigation and revision comparisons are implemented per `docs/milestone-6.md`. The Project Memory chatbot remains Milestone 7.
 
 > User-account amendment (September 4, 2026): before Milestone 6, implement email/password registration and login with user-owned, account-isolated projects. The first registered account claims preserved pre-account projects. This supersedes older shared-password/no-signup checklist text. Keep roles, sharing, email verification and password reset out of scope.
@@ -56,10 +58,10 @@ Exit: original baseline → live estimate → edited/approved snapshot → clien
 - [ ] Implement optional explicit whole-decision supersession and preserved history.
 - [x] Complete searchable Memory list and filters, with all results and no pagination.
 - [x] Add decision details, source links, original AI and chronological human revision views.
-- [ ] Implement read-only project-scoped retrieval and grounded answer generation through the same provider adapter.
-- [ ] Validate citations and source quotes; generate links from server-owned identifiers.
-- [ ] Add direct Show All Decisions database view; handle context limits without silent omission.
-- [ ] Verify final/current decision versus pending/declined/superseded distinctions.
+- [x] Implement read-only project-scoped retrieval and grounded answer generation through the same provider adapter.
+- [x] Validate citations and source quotes; generate links from server-owned identifiers.
+- [x] Add direct Show All Decisions database view; handle context limits without silent omission.
+- [x] Verify final/current decision versus pending/declined/superseded distinctions.
 
 Exit: ask about an accepted change and obtain a cited answer; ask about a revision and see actual saved differences; ask an unsupported question and receive an evidence gap.
 
@@ -94,5 +96,5 @@ Exit: no known incorrect totals, evidence fabrication, broken approval access or
 - [ ] Account-free client decision access is token-scoped and expiring.
 - [ ] Accepted changes affect future scope analysis; rejected changes do not.
 - [ ] AI originals, human revisions, approved snapshots and client decisions are persisted.
-- [ ] Chat answers cite real project evidence and cannot mutate records.
+- [x] Chat answers cite real project evidence and cannot mutate records.
 - [ ] Evaluation fixtures never appear as substitute live AI responses.
