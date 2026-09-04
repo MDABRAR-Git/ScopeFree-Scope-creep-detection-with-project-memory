@@ -1,6 +1,6 @@
 # Milestone 1 — Foundation and access
 
-Scope: the user's eight-milestone sequence takes precedence over the six phases in the supplied TASKS.md. This milestone establishes the standalone application, shared contracts/data model, password access, project list/create/detail, provider boundary and reproducible local setup. Baseline/request intake begins in Milestone 2. No push or deployment is authorized.
+Scope: the user's eight-milestone sequence takes precedence over the six phases in the supplied TASKS.md. This milestone establishes the standalone application, shared contracts/data model, password access, project list/create/detail, provider boundary and reproducible local setup. Baseline/request intake begins in Milestone 2. Initial implementation was local only; the user subsequently authorized pushing Milestone 1 to `abrar-dev`. Deployment is not authorized.
 
 ## Acceptance checks recorded before implementation
 
@@ -56,4 +56,4 @@ Failures fixed before the passing run:
 - Chromium with desktop/mobile viewport sizes was tested. Physical mobile devices, Firefox, Safari and a comprehensive accessibility audit were not tested.
 - A fresh checkout on another machine, deployed HTTPS behavior and full release verification are deferred to Milestone 8. Production Secure cookie flags were verified locally.
 - The single-freelancer login limit is global; repeated successful logins also consume the ten-attempt/15-minute budget. This is documented in README.
-- No push or deployment was performed. Milestone 1 is checkpointed as `c9e307b` on `abrar-dev`. The user subsequently specified `abrar-dev` for every milestone; the local branch was fast-forwarded to the existing checkpoint without rewriting it.
+- The original verification run performed no push or deployment. Milestone 1 is checkpointed as `c9e307b` on `abrar-dev`; the local branch was fast-forwarded to the existing checkpoint without rewriting it. The latest user instruction authorizes pushing this milestone to `abrar-dev` and requires subsequent milestones to be completed, tested and verified before committing and pushing to `milestone-N`. No deployment is authorized.
