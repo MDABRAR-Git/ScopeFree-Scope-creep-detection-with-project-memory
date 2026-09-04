@@ -1,5 +1,7 @@
 # Memovix Scope Change Estimator — Final MVP specification
 
+> Milestone 6 implementation amendment (September 5, 2026): `docs/milestone-6.md` defines the implemented read-only Project Memory list, filters, search and finalized-decision detail. It reproduces frozen offers, source evidence, original AI output and saved revisions without writes or AI calls. The evidence-backed chatbot remains Milestone 7.
+
 > User-account amendment (September 4, 2026): before Milestone 6, ScopeFree uses email/password registration and login. Projects and all related records are isolated to their owning user. The first account registered after upgrading claims preserved pre-account projects. This supersedes older shared-password and no-signup text; roles, project sharing, email verification and password reset remain outside the current request.
 
 > Milestone 5 implementation amendment (September 4, 2026): the user requested implementation of `docs/milestone-5.md`. Its client intake, explicit saved agreement terms, offer history, atomic acceptance/decline and pending-offer correction flow supersede conflicting older milestone text. A revoked offer requires a new saved revision and approval before replacement. Preserve the Milestone 4 pricing contract and the `abrar-dev`-only branch/push instruction; no deployment.

@@ -1,6 +1,6 @@
 # Milestone 6 plan — Project Memory
 
-Status: proposed implementation plan, not implemented or verified. Prepared against `abrar-dev` at `4e1b055`. This document becomes the Milestone 6 source of truth after the user approves implementation. All implementation, tests, commits and pushes stay directly on `abrar-dev` / `origin/abrar-dev`; no separate branch and no deployment.
+Status: implemented on `abrar-dev` following the user's September 5, 2026 instruction. Verification results are recorded below. All implementation, tests, commits and pushes stay directly on `abrar-dev` / `origin/abrar-dev`; no separate branch and no deployment.
 
 ## Outcome and boundary
 
@@ -90,4 +90,16 @@ Run build, typecheck, lint, offline tests, full database/browser regressions, re
 
 ## Delivery
 
-Implementation will stay on `abrar-dev` in this order: contracts/projection, list API/page, decision detail/source resolution, verification/documentation. No deployment is part of Milestone 6.
+Implementation was completed directly on `abrar-dev` in this order: contracts/projection, list API/page, decision detail/source resolution, verification/documentation. It adds no schema migration and performs no deployment.
+
+## Observed verification — September 5, 2026
+
+- `npm run typecheck` and `npm run lint` pass.
+- `npm test` passes 72 tests in 12 files; 25 explicitly gated tests remain skipped in the offline suite.
+- The full `npm run test:e2e` regression passes all 56 tests, including five Milestone 6 database/API/browser cases. The focused Milestone 6 rerun also passes after the final offer-history consistency check.
+- `npm run build` completes and includes both authenticated Memory APIs and both server-rendered Memory pages.
+- `npm run test:runtime` confirms the list and immutable detail responses remain byte-equivalent across a production application restart, alongside the existing persistence and safe-failure checks.
+- Desktop at 1440px and mobile at 390px were inspected from browser screenshots. The detail sections stack without horizontal overflow and the project navigation remains usable.
+- The existing real-provider browser workflow now checks that an accepted agreement, its frozen price and its source link appear in Project Memory without another AI request. That external workflow was not run: automatic approval review rejected sending project and authentication-test data to Featherless. No live-provider result is claimed for this milestone.
+
+The evidence-backed **Ask Project Memory** chatbot remains Milestone 7. Project Memory intentionally has no pagination and can become a long page for projects with many decisions; Milestone 6 requires complete results without hidden limits.

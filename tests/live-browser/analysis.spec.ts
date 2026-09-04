@@ -61,6 +61,11 @@ test('real Featherless analysis, review, client acceptance and subsequent agreed
     await clientPage.screenshot({path:'.local/live-browser-results/live-client-accepted-390.png',fullPage:true});
   } finally { await client.close(); }
   const history=await page.request.get(`/api/projects/${estimate.projectId}/history`);expect(history.status()).toBe(200);expect((await history.json()).history.summary.acceptedAdditionalPaise.likely).toBe(String(reviewedEstimate.calculated.totalChargePaise.likely));
+  await page.goto(`/projects/${estimate.projectId}/memory`);await expect(page.getByRole('heading',{name:'Decisions and current offers',exact:true})).toBeVisible();
+  await expect(page.getByText('Accepted',{exact:true}).first()).toBeVisible();await page.getByRole('link',{name:'Open decision',exact:true}).click();
+  await expect(page.getByText('This is the exact offer attached to the final decision.')).toBeVisible();await expect(page.getByText('The website now includes exactly eight responsive pages.',{exact:true})).toBeVisible();
+  await expect(page.getByRole('link',{name:/Original baseline/}).first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  console.log('LIVE MEMORY PASS: accepted agreement, frozen price and server-generated source link are visible without another AI call.');
   const followup=await page.request.post(`/api/projects/${estimate.projectId}/requests`,{headers:{Origin:origin},data:{text:'Build the eight responsive website pages exactly as now agreed.',hourlyRatePaise:150000}});expect(followup.status()).toBe(201);
   const nextId=(await followup.json()).request.id;
   const future=await page.request.post(`/api/requests/${nextId}/analyze`,{headers:{Origin:origin},data:{idempotencyKey:randomUUID()},timeout:125000});expect(future.status()).toBe(200);

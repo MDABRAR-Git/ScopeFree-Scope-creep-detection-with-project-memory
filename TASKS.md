@@ -1,5 +1,7 @@
 # Implementation checklist — 24 hours, four members
 
+> Milestone 6 implementation amendment (September 5, 2026): the read-only Project Memory list, complete search/status filters, immutable decision detail, offer history, supersession links, source navigation and revision comparisons are implemented per `docs/milestone-6.md`. The Project Memory chatbot remains Milestone 7.
+
 > User-account amendment (September 4, 2026): before Milestone 6, implement email/password registration and login with user-owned, account-isolated projects. The first registered account claims preserved pre-account projects. This supersedes older shared-password/no-signup checklist text. Keep roles, sharing, email verification and password reset out of scope.
 
 > Milestone 5 implementation amendment (September 4, 2026): the user requested implementation of `docs/milestone-5.md`. Its client intake, explicit saved agreement terms, offer history, atomic acceptance/decline and pending-offer correction flow supersede conflicting older milestone text. A revoked offer requires a new saved revision and approval before replacement. Preserve the Milestone 4 pricing contract and the `abrar-dev`-only branch/push instruction; no deployment.
@@ -52,8 +54,8 @@ Exit: original baseline → live estimate → edited/approved snapshot → clien
 ## Phase 4 — Project Memory and chatbot (hours 12–17)
 - [ ] Implement original baseline plus accepted amendments as effective scope.
 - [ ] Implement optional explicit whole-decision supersession and preserved history.
-- [ ] Complete searchable Memory list and filters, with all results and no pagination.
-- [ ] Add decision details, source links, original AI and chronological human revision views.
+- [x] Complete searchable Memory list and filters, with all results and no pagination.
+- [x] Add decision details, source links, original AI and chronological human revision views.
 - [ ] Implement read-only project-scoped retrieval and grounded answer generation through the same provider adapter.
 - [ ] Validate citations and source quotes; generate links from server-owned identifiers.
 - [ ] Add direct Show All Decisions database view; handle context limits without silent omission.

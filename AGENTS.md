@@ -1,5 +1,7 @@
 # Coding-agent instructions — standalone Scope Change Estimator
 
+> Milestone 6 implementation amendment (September 5, 2026): `docs/milestone-6.md` is implemented as a read-only, account-scoped Project Memory list and immutable finalized-decision detail. Preserve authoritative accepted/declined/superseded/pending distinctions, complete search without pagination, frozen prices, revision history and server-resolved evidence links. The Ask Project Memory chatbot remains Milestone 7.
+
 > User-account amendment (September 4, 2026): before Milestone 6, replace the shared configured password with email/password registration and login. Every project and all related records belong to the individual signed-in user. The first registered account claims preserved projects from the pre-account installation. This explicit user request supersedes the older “no signup/complex roles” and single-freelancer access text. Do not add roles, sharing, email verification or password reset unless separately requested.
 
 > Milestone 5 implementation amendment (September 4, 2026): the user requested implementation of `docs/milestone-5.md`. Its client intake, explicit saved agreement terms, offer history, atomic acceptance/decline and pending-offer correction flow supersede conflicting older milestone text. A revoked offer requires a new saved revision and approval before replacement. Preserve the Milestone 4 pricing contract and the `abrar-dev`-only branch/push instruction; no deployment.

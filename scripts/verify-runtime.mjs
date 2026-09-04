@@ -57,6 +57,11 @@ try {
   savedEstimate = (await (await fetch(`${origin}/api/estimates/${savedEstimate.id}`,{headers:{Cookie:cookie}})).json()).estimate;
   const historyBefore = await fetch(`${origin}/api/projects/${projectId}/history`, { headers: { Cookie: cookie } }); assert.equal(historyBefore.status, 200);
   const savedHistory = (await historyBefore.json()).history;
+  const decisionId = (await pool.query('SELECT "id" FROM "ProjectDecision" WHERE "proposalId"=$1', [offer.proposalId])).rows[0].id;
+  const memoryBefore = await fetch(`${origin}/api/projects/${projectId}/memory`, { headers: { Cookie: cookie } }); assert.equal(memoryBefore.status, 200);
+  const savedMemory = (await memoryBefore.json()).memory;
+  const memoryDetailBefore = await fetch(`${origin}/api/projects/${projectId}/memory/${decisionId}`, { headers: { Cookie: cookie } }); assert.equal(memoryDetailBefore.status, 200);
+  const savedMemoryDetail = (await memoryDetailBefore.json()).decision;
   savedRequest.estimate = { id: savedEstimate.id };
   await stop(); await start();
   const read = await fetch(`${origin}/api/projects/${projectId}`, { headers: { Cookie: cookie } }); assert.equal(read.status, 200); assert.equal((await read.json()).project.name, 'Restart verification');
@@ -72,6 +77,9 @@ try {
   assert.equal(savedHistory.summary.additionalRequests, 1);
   assert.equal(savedHistory.summary.acceptedAdditionalPaise.likely, String(savedEstimate.calculated.totalChargePaise.likely));
   console.log('PASS: request numbers, history, additional-request counts and saved billing totals persist after restart.');
+  const memoryAfter = await fetch(`${origin}/api/projects/${projectId}/memory`, { headers: { Cookie: cookie } }); assert.equal(memoryAfter.status, 200); assert.deepEqual((await memoryAfter.json()).memory, savedMemory);
+  const memoryDetailAfter = await fetch(`${origin}/api/projects/${projectId}/memory/${decisionId}`, { headers: { Cookie: cookie } }); assert.equal(memoryDetailAfter.status, 200); assert.deepEqual((await memoryDetailAfter.json()).decision, savedMemoryDetail);
+  console.log('PASS: Project Memory list and immutable decision detail remain byte-equivalent after restart.');
   console.log('PASS: analysis original, pinned sources, human revision, pricing, approval and audit history persist after a production restart (test-only provider).');
   await stop(); await start({ AI_API_KEY: '' });
   const anotherRequest = await post(`/api/projects/${projectId}/requests`, { text: 'Add a second additional page.', hourlyRatePaise: 100000 }, cookie);
