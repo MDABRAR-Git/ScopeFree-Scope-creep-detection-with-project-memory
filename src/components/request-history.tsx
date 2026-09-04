@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AnalyzeButton } from "./analyze-button";
 import type { RequestHistory } from "@/server/request-history";
 import { formatMoney, scenarios } from "@/lib/pricing";
+import { RequestRate } from "./request-rate";
 
 function MoneyRange({ value }: { value: { minimum: number | string; likely: number | string; maximum: number | string } }) {
   return <span>{formatMoney(value.minimum)}–{formatMoney(value.maximum)} <small>· likely {formatMoney(value.likely)}</small></span>;
@@ -12,7 +13,7 @@ export function RequestHistoryView({ history, projectId }: { history: RequestHis
   function card(row: RequestHistory["rows"][number], detail = false) {
     return <article className="intake-panel request-card" key={row.id}>
       <div className="request-card-meta"><span className="neutral-badge">{row.classification ?? "Not analyzed"}</span><time dateTime={row.createdAt}>{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(row.createdAt))} UTC</time></div>
-      <h4>#{row.requestNumber} — {row.summary}</h4>{!detail && <p className="source-text">{row.description}</p>}<p>{statusLabels[row.status]} · Client acceptance: {row.clientAcceptance}</p>
+      <h4>#{row.requestNumber} — {row.summary}</h4>{!detail && <p className="source-text">{row.description}</p>}<p>{statusLabels[row.status]} · Client acceptance: {row.clientAcceptance}</p><p>Submitted by {row.origin === "client" ? "client" : "freelancer"}{row.offerStatus ? ` · Offer: ${row.offerStatus}` : ""}</p>
       {row.stale && row.clientAcceptance !== "ACCEPTED" && <p className="field-help">Scope has changed since this request. Excluded from pending billing.</p>}
       {row.hourlyRatePaise != null && <p>{formatMoney(row.hourlyRatePaise)} / hour</p>}
       {row.billing ? <><p>Billable hours: {row.billing.billableQuarterHours.minimum / 4}–{row.billing.billableQuarterHours.maximum / 4} h · likely {row.billing.billableQuarterHours.likely / 4} h</p>
@@ -21,7 +22,7 @@ export function RequestHistoryView({ history, projectId }: { history: RequestHis
         <p><strong>{row.billing.provisional ? "Provisional total" : "Total estimate"}: <MoneyRange value={row.billing.totalChargePaise} /></strong></p>
         {row.billing.provisional && <p className="uncertainty-note">Unresolved work is excluded. Billing cannot be finalized.</p>}</> : <p>Billable hours and prices await review.</p>}
       {row.acceptedAt && <p>Accepted: {new Date(row.acceptedAt).toISOString()}</p>}
-      {!detail && <AnalyzeButton requestId={row.id} projectId={projectId} estimateId={row.estimateId ?? undefined} />}
+      {!detail && (row.hourlyRatePaise === null && !row.estimateId ? <RequestRate requestId={row.id}/> : <AnalyzeButton requestId={row.id} projectId={projectId} estimateId={row.estimateId ?? undefined} />)}
       {detail && row.estimateId && <Link className="back-link" href={`/projects/${projectId}/estimates/${row.estimateId}`}>Open review</Link>}
     </article>;
   }

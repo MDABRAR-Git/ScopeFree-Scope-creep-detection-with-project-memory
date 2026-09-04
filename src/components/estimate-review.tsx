@@ -7,6 +7,8 @@ import type { AnalysisOutput } from "@/lib/contracts";
 import { calculatePricing, chargeRupeesSchema, formatMoney, reviewDraftSchema, scenarios, type Calculated, type ReviewDraft } from "@/lib/pricing";
 import { requiresEditReason } from "@/lib/review";
 import type { SavedEstimate } from "@/server/analysis";
+import { emptyAgreement, validateAgreement, type Agreement } from "@/lib/agreement";
+import { AgreementEditor } from "./agreement-editor";
 
 type Task = AnalysisOutput["tasks"][number];
 const noteFields = ["assumptions", "missingInformation", "risks"] as const;
@@ -15,14 +17,14 @@ type EditableTask = Omit<Task, "estimatedHours" | typeof noteFields[number]> & {
   estimatedHours: Record<typeof scenarios[number], string>;
   assumptions: string; missingInformation: string; risks: string;
 };
-type FormDraft = { tasks: EditableTask[]; explanation: string; rate: string; charge: string; chargeReason: string };
+type FormDraft = { tasks: EditableTask[]; explanation: string; rate: string; charge: string; chargeReason: string; agreement: Agreement };
 type Issue = { path: string; message: string };
 const moneyInput = (paise: number) => `${BigInt(paise) / 100n}.${(BigInt(paise) % 100n).toString().padStart(2, "0")}`;
 function editableTask(task: Task): EditableTask {
   return { ...task, estimatedHours: { minimum: String(task.estimatedHours.minimum), likely: String(task.estimatedHours.likely), maximum: String(task.estimatedHours.maximum) }, assumptions: task.assumptions.join("\n"), missingInformation: task.missingInformation.join("\n"), risks: task.risks.join("\n") };
 }
-function editableDraft(draft: ReviewDraft): FormDraft {
-  return { tasks: draft.analysis.tasks.map(editableTask), explanation: draft.analysis.explanation, rate: moneyInput(draft.hourlyRatePaise), charge: moneyInput(draft.additionalChargePaise), chargeReason: draft.additionalChargeReason };
+function editableDraft(draft: ReviewDraft, agreement: Agreement = emptyAgreement()): FormDraft {
+  return { tasks: draft.analysis.tasks.map(editableTask), explanation: draft.analysis.explanation, rate: moneyInput(draft.hourlyRatePaise), charge: moneyInput(draft.additionalChargePaise), chargeReason: draft.additionalChargeReason, agreement };
 }
 const lines = (value: string) => value.split("\n").map(line => line.trim()).filter(Boolean);
 function validateForm(form: FormDraft, sources: SavedEstimate["sources"]): { draft?: ReviewDraft; calculated?: Calculated; issues: Issue[] } {
@@ -49,6 +51,8 @@ function validateForm(form: FormDraft, sources: SavedEstimate["sources"]): { dra
     catch (error) { issues.push({ path: `analysis.tasks.${index}`, message: error instanceof Error ? error.message : "Check this task’s evidence and questions." }); }
   });
   if (issues.length) return { issues };
+  try { validateAgreement(form.agreement, parsed.data.analysis, sources); }
+  catch (error) { return { issues: [{ path: "agreement", message: error instanceof Error ? error.message : "Check agreement terms." }] }; }
   try { return { draft: parsed.data, calculated: calculatePricing(parsed.data), issues }; }
   catch { return { issues: [{ path: "additionalChargePaise", message: "The calculated total exceeds the supported exact monetary range. Reduce the additional charge." }] }; }
 }
@@ -65,7 +69,7 @@ export function ReviewPrices({ draft, calculated }: { draft: ReviewDraft; calcul
 }
 
 export function EstimateReview({ estimate, onSaved, children }: { estimate: SavedEstimate; onSaved: (estimate: SavedEstimate) => void; children: ReactNode }) {
-  const [form, setForm] = useState(() => editableDraft(estimate.draft));
+  const [form, setForm] = useState(() => editableDraft(estimate.draft, estimate.agreement));
   const [editing, setEditing] = useState(false);
   const [editReason, setEditReason] = useState("");
   const [reviewed, setReviewed] = useState(false);
@@ -79,12 +83,16 @@ export function EstimateReview({ estimate, onSaved, children }: { estimate: Save
   const prefix = useId();
   const id = (path: string) => `${prefix}-${path}`;
   const validation = validateForm(form, estimate.sources);
-  const dirty = JSON.stringify(form) !== JSON.stringify(editableDraft(estimate.draft)) || editReason.length > 0;
+  const dirty = JSON.stringify(form) !== JSON.stringify(editableDraft(estimate.draft, estimate.agreement)) || editReason.length > 0;
+  let agreementError = "";
+  try { validateAgreement(estimate.agreement, estimate.analysis, estimate.sources, true); }
+  catch (cause) { agreementError = cause instanceof Error ? cause.message : "Complete the agreement terms."; }
   const reasonRequired = estimate.draft.analysis.tasks.some(task => {
     const next = form.tasks.find(candidate => candidate.id === task.id);
     return !next || next.classification !== task.classification;
   });
   const unlocked = estimate.status === "REVIEW_REQUIRED";
+  const needsReplacementReview = estimate.offers.some(p => p.status === "REVOKED" && p.approvedRevisionId === estimate.revisions.find(r => r.revision === estimate.currentRevision)?.id);
   const uncertain = estimate.draft.analysis.tasks.some(task => task.classification === "UNCERTAIN");
   const hasInvalidDraft = validation.issues.length > 0;
   const issues = [...validation.issues, ...(reasonRequired && !editReason.trim() ? [{ path: "editReason", message: "Enter one review reason covering the classification changes and removed tasks." }] : [])];
@@ -110,14 +118,14 @@ export function EstimateReview({ estimate, onSaved, children }: { estimate: Save
     if (action === "reopen" && estimate.status !== "APPROVED") return;
     setError(""); setFeedback("");
     if (action === "review" && (!validation.draft || (reasonRequired && !editReason.trim()))) { setError("Review the highlighted inputs. Your draft has been kept."); return; }
-    if (action === "approve" && (dirty || hasInvalidDraft || uncertain || !reviewed || estimate.legacyRevision)) { setError("Save a valid review, resolve uncertain tasks and confirm the review before approving."); return; }
+    if (action === "approve" && (dirty || hasInvalidDraft || uncertain || !reviewed || estimate.legacyRevision || needsReplacementReview || agreementError)) { setError("Save a valid review, complete agreement terms, resolve uncertain tasks and confirm the review before approving."); return; }
     if (action === "review" && validation.draft && requiresEditReason(estimate.draft, validation.draft) && !editReason.trim()) { setError("A review reason is required for classification changes or task removal."); return; }
     working.current = true; setBusy(action);
     try {
-      const body = action === "review" ? { expectedRevision: estimate.currentRevision, draft: validation.draft, editReason: editReason.trim() } : action === "approve" ? { expectedRevision: estimate.currentRevision, reviewed: true } : { expectedRevision: estimate.currentRevision };
+      const body = action === "review" ? { expectedRevision: estimate.currentRevision, draft: validation.draft, agreement: form.agreement, editReason: editReason.trim() } : action === "approve" ? { expectedRevision: estimate.currentRevision, reviewed: true } : { expectedRevision: estimate.currentRevision };
       const result = await readApiResponse(await fetch(`/api/estimates/${estimate.id}/${action}`, { method: action === "review" ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
       const saved = result.estimate as SavedEstimate;
-      onSaved(saved); setForm(editableDraft(saved.draft)); setEditReason(""); setReviewed(false); setEditing(false);
+      onSaved(saved); setForm(editableDraft(saved.draft, saved.agreement)); setEditReason(""); setReviewed(false); setEditing(false);
       setFeedback(action === "review" ? `Review saved as revision ${saved.currentRevision}. Confirm this saved revision to approve it.` : action === "approve" ? `Revision ${saved.currentRevision} approved. The saved review is now read-only.` : "Review reopened. Previous saved revisions remain in history.");
     } catch (cause) { setError(`${cause instanceof Error ? cause.message : "Unable to update this estimate."} Your draft has been kept.`); }
     finally { working.current = false; setBusy(null); }
@@ -170,6 +178,7 @@ export function EstimateReview({ estimate, onSaved, children }: { estimate: Save
     <div className="analysis-layout"><div className="analysis-tasks">
       {editing && unlocked ? <fieldset ref={editorRef} className="review-editor" id={id("editor")} disabled={!!busy}><legend className="review-sr-only">Review inputs</legend>
         {form.tasks.map(taskEditor)}
+        <AgreementEditor value={form.agreement} onChange={agreement => change({ ...form, agreement })} analysis={{tasks:form.tasks}} sources={estimate.sources} options={estimate.supersessionOptions}/>
         <div className="review-add-task"><button type="button" className="button button-secondary" disabled={form.tasks.length >= 20} onClick={() => {
           change({ ...form, tasks: [...form.tasks, editableTask({ id: crypto.randomUUID(), title: "", classification: "UNCERTAIN", matchedScopeClause: null, sourceEvidence: [], estimatedHours: { minimum: 0, likely: 0, maximum: 0 }, assumptions: [], missingInformation: [], risks: [], complexity: "", explanation: "" })] });
         }}>Add task</button><span>{form.tasks.length} / 20 tasks · At least one task is required</span></div>
@@ -192,11 +201,13 @@ export function EstimateReview({ estimate, onSaved, children }: { estimate: Save
     <div className="review-actions intake-panel">
       {unlocked ? <><h3>Save, then approve</h3><p>Approval freezes the exact saved revision and its calculated totals.</p>
         {editing && <button type="submit" className="button button-primary" disabled={!!busy}>{busy === "review" ? "Saving review…" : "Save review"}</button>}
+        {needsReplacementReview && <p className="uncertainty-note">Open Edit review and save a new revision before approving a replacement offer.</p>}
         {dirty && <p className="uncertainty-note">Save your changes before approving. Unsaved changes cannot be approved.</p>}
         {uncertain && <p className="review-help">Resolve every UNCERTAIN task and save the review to enable approval.</p>}
-        <label className="check-label" htmlFor={id("reviewed")}><input id={id("reviewed")} type="checkbox" checked={reviewed} disabled={!!busy || dirty || hasInvalidDraft || uncertain || estimate.legacyRevision} onChange={e => setReviewed(e.target.checked)} /><span>I have reviewed the scope, evidence, assumptions, hours and price for saved revision {estimate.currentRevision}.</span></label>
-        <button type="button" className="button button-primary" disabled={!!busy || dirty || hasInvalidDraft || uncertain || !reviewed || estimate.legacyRevision} onClick={() => void perform("approve")}>{busy === "approve" ? "Approving…" : "Approve estimate"}</button>
-      </> : <><h3>Human-approved · Revision {estimate.currentRevision}</h3><p>This saved review is read-only. Approval is internal and does not record client acceptance.</p>{estimate.status === "APPROVED" ? <button type="button" className="button button-secondary" disabled={!!busy} onClick={() => void perform("reopen")}>{busy === "reopen" ? "Reopening…" : "Reopen Review"}</button> : <p className="review-help">A proposal exists for this estimate. Review cannot be reopened.</p>}</>}
+        {agreementError && <p className="uncertainty-note">{agreementError} Open Edit review to complete the terms.</p>}
+        <label className="check-label" htmlFor={id("reviewed")}><input id={id("reviewed")} type="checkbox" checked={reviewed} disabled={!!busy || dirty || hasInvalidDraft || uncertain || estimate.legacyRevision || needsReplacementReview || !!agreementError} onChange={e => setReviewed(e.target.checked)} /><span>I have reviewed the scope, evidence, assumptions, hours and price, including the client-facing agreement terms, for saved revision {estimate.currentRevision}.</span></label>
+        <button type="button" className="button button-primary" disabled={!!busy || dirty || hasInvalidDraft || uncertain || !reviewed || estimate.legacyRevision || needsReplacementReview || !!agreementError} onClick={() => void perform("approve")}>{busy === "approve" ? "Approving…" : "Approve estimate"}</button>
+      </> : <><h3>Human-approved · Revision {estimate.currentRevision}</h3><p>This saved review is read-only. Approval is internal and does not record client acceptance.</p>{estimate.status === "APPROVED" ? <button type="button" className="button button-secondary" disabled={!!busy} onClick={() => void perform("reopen")}>{busy === "reopen" ? "Reopening…" : "Reopen Review"}</button> : <p className="review-help">Use Client offers below to revoke a pending offer and edit. Final client decisions cannot be changed.</p>}</>}
     </div>
   </form>;
 }

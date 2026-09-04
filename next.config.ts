@@ -8,7 +8,7 @@ const config: NextConfig = {
     "/api/projects/*/baseline/extract": ["./scripts/extract-document.mjs", "./node_modules/mammoth/**/*", "./node_modules/yauzl/**/*", "./node_modules/pdfjs-dist/legacy/build/**/*"],
   },
   async headers() {
-    return [{ source: "/:path*", headers: [
+    return [{ source: "/client/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] }, { source: "/:path*", headers: [
       { key: "Referrer-Policy", value: "no-referrer" },
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "DENY" },

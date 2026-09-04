@@ -1,0 +1,26 @@
+.client-page { max-width:820px; margin:0 auto; padding:30px 24px 60px; color:var(--ink); }
+.client-page header { border-bottom:1px solid var(--border); padding-bottom:20px; margin-bottom:30px; }
+.client-brand { font-size:25px; font-weight:700; color:#295a45; }
+.client-page h1 { font-size:30px; margin:20px 0; overflow-wrap:anywhere; }
+.client-page h2 { font-size:22px; margin:20px 0; }
+.client-page h3 { font-size:18px; margin:10px 0; }
+.client-page p,.offer-content p { line-height:1.7; margin:12px 0; overflow-wrap:anywhere; }
+.client-page label,.share-link label,.agreement-editor label { display:block; font-size:13px; line-height:1.8; }
+.client-page textarea,.share-link input,.agreement-editor textarea { display:block; width:100%; min-width:0; max-width:100%; padding:12px; font:inherit; border:1px solid #cbd6c5; border-radius:7px; margin:10px 0; }
+.client-page .intake-panel,.offer-content .intake-panel { margin:20px 0; padding:24px; }
+.client-page .check-label,.agreement-editor .check-label,.offer-manager .check-label,.client-intake-link .check-label { display:flex; gap:12px; align-items:flex-start; margin:18px 0; }
+.client-page input[type=checkbox],.agreement-editor input[type=checkbox],.offer-manager input[type=checkbox],.client-intake-link input[type=checkbox] { width:18px; height:18px; flex-shrink:0; margin-top:4px; }
+.client-page :is(button,input,textarea):focus-visible { outline:3px solid #719057; outline-offset:3px; }
+.offer-buttons { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+.offer-content { min-width:0; }.offer-content .review-price-range { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.offer-content blockquote { border-left:3px solid #a6bb97; padding:0 15px; margin:16px 0; }
+.offer-content ul { list-style:disc; padding-left:20px; }.offer-content li { overflow-wrap:anywhere; }
+.offer-budget-note { padding:20px; background:#eef4e8; border-radius:8px; }
+.client-page footer { font-size:12px; color:#617156; line-height:1.8; padding-top:30px; }
+.offer-manager,.client-intake-link { margin:28px 0; }.offer-manager>p,.client-intake-link>p { font-size:13px; line-height:1.8; margin:14px 0; }
+.saved-agreement { margin:24px 0; }.saved-agreement p { margin-top:14px; font-size:13px; line-height:1.8; }
+.share-link { background:#f6f8f3; border:1px solid #d8e3ce; padding:18px; margin:20px 0; border-radius:8px; }
+.agreement-clause { border:1px solid #d8e3ce; border-radius:8px; padding:16px; margin:20px 0; min-width:0; }
+.agreement-editor select { width:100%; min-width:0; padding:12px; margin:10px 0; font:inherit; }
+.agreement-editor .review-field { margin-top:20px; }
+@media(max-width:720px) { .client-page { padding:20px 16px 40px; }.client-page h1 { font-size:25px; }.offer-content .review-price-range { grid-template-columns:minmax(0,1fr); }.offer-buttons .button { width:100%; }.client-page .intake-panel { padding:20px 16px; }.offer-content,.share-link,.agreement-editor { overflow-wrap:anywhere; } }
