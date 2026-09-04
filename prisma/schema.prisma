@@ -36,6 +36,7 @@ model ChangeRequest {
   project              Project          @relation(fields: [projectId], references: [id], onDelete: Restrict)
   text                 String
   basedOnScopeRevision Int
+  hourlyRatePaise       Int?
   supersedesDecisionId String?          @db.Uuid
   supersedesDecision   ProjectDecision? @relation("RequestSupersession", fields: [supersedesDecisionId], references: [id], onDelete: Restrict)
   createdAt            DateTime         @default(now()) @db.Timestamptz(3)

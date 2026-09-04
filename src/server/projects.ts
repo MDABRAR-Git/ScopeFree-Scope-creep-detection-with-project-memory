@@ -4,7 +4,10 @@ import { database, db } from "./db";
 import { AppError } from "./errors";
 
 const select = { id: true, name: true, scopeRevision: true, createdAt: true } as const;
-export async function listProjects() { return database(() => db().project.findMany({ select, orderBy: [{ createdAt: "desc" }, { id: "asc" }] })); }
+export async function listProjects() {
+  const projects = await database(() => db().project.findMany({ select: { ...select, baseline: { select: { id: true } }, _count: { select: { requests: true } } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }));
+  return projects.map(({ baseline, _count, ...project }) => ({ ...project, baselineConfirmed: !!baseline, requestCount: _count.requests }));
+}
 export async function createProject(input: unknown) {
   const data = projectInputSchema.parse(input);
   return database(() => db().$transaction(async tx => {

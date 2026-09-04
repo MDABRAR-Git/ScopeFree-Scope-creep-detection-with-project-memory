@@ -1,8 +1,8 @@
 # ScopeFree
 
-A standalone workspace for keeping project agreements and scope changes connected. **Milestone 1: foundation and access** is implemented. The source documents describe the full intended application; they are not claims that all features are built.
+A standalone workspace for keeping project agreements and scope changes connected. **Milestones 1–2: foundation, access, baseline and request intake** are implemented. The source documents describe the full intended application; they are not claims that all features are built.
 
-Available now: password login/logout, a private project list, project creation, saved project overview, PostgreSQL persistence, shared Zod contracts and a server-only configurable AI transport. Baselines, requests, live analysis, review/pricing, client proposals, Project Memory and chatbot arrive in Milestones 2–8. Their navigation labels are inactive. There is no runtime demo or seeded project content.
+Available now: password login/logout, private projects, original-agreement paste/upload and clause confirmation, saved client requests with INR hourly rates, PostgreSQL persistence, shared Zod contracts and a server-only configurable AI transport. Live analysis, review/pricing, client proposals, Project Memory and chatbot arrive in Milestones 3–8. Baseline and Requests navigation is active; Memory/chat remain inactive. There is no runtime demo or seeded project content.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ With PostgreSQL 18 already installed, run `./scripts/local-postgres.ps1` in Powe
 - All implemented workspace pages and project API routes enforce sessions. Mutations (including login) require an exact trusted `Origin`; cross-site fetches are rejected. No GET handler changes state.
 - Login allows ten attempts per 15-minute window, persisted atomically in PostgreSQL. This single-freelancer global limit deliberately does not trust IP/proxy headers. Successful attempts also count; the window does not slide. After the limit, even a valid login must wait. An attacker can temporarily exhaust this budget; a public deployment should add an edge limiter appropriate to its trusted proxy.
 - Project names are trimmed, required and limited to 120 characters. Extra client fields are rejected. JSON request bodies are size-bounded. Projects use UUIDs and record a creation audit event atomically. One freelancer owns the whole workspace; project IDs are resource identifiers, not access credentials.
-- Initial migrations establish all specified relational models and additional session/throttling tables. Later milestone services will enforce immutable snapshots, source membership, cross-record project consistency, approvals and transactional decisions. These workflows are not implemented or verified yet. JSON contracts are schema-versioned; timestamps use timestamp-with-time-zone columns, and application database connections explicitly use UTC independent of the database host's timezone.
+- Migrations establish the relational models and session/throttling tables. Original baselines are now immutable at both service and database level. Later milestone services will enforce estimate/proposal snapshot immutability, evidence membership, approvals and transactional decisions. These later workflows are not implemented or verified yet. JSON contracts are schema-versioned; timestamps use timestamp-with-time-zone columns, and application database connections explicitly use UTC independent of the database host's timezone.
 - API failures use `{error:{code,message,fields?,retryable}}` and `Cache-Control: no-store`. Raw provider/database errors, prompts, passwords, and session cookies are not included. Text is escaped by React. No public proposal/token API exists yet.
 
 ## AI configuration and replacement boundary
@@ -58,4 +58,28 @@ Browser/runtime verification uses a **separate disposable database whose name en
 
 Manual check: open the login page → enter a wrong password and inspect the error → log in → create a project → reload its overview → return to All projects → log out → open `/projects` and confirm login is required. Check at narrow/mobile width too. Stop/restart the application, log in again and confirm your project remains.
 
-See [the Milestone 1 verification record](docs/milestone-1.md) for the observed results and limitations. The imported [SPEC.md](SPEC.md), [AGENTS.md](AGENTS.md) and [TASKS.md](TASKS.md) preserve the handoff; their full-project checkboxes intentionally remain unchecked.
+See the [Milestone 1](docs/milestone-1.md) and [Milestone 2](docs/milestone-2.md) verification records for observed results and limitations. The imported [SPEC.md](SPEC.md), [AGENTS.md](AGENTS.md) and [TASKS.md](TASKS.md) preserve the handoff; their full-project checkboxes intentionally remain unchecked.
+
+## Baseline and request intake
+
+Open a project → Baseline → paste the original agreement or choose one text-based PDF, DOCX or UTF-8 TXT (up to 5 MB). Extraction produces an editable preview only. Review the whole source, then choose **Review clauses**. You can edit clause text/IDs, add/remove clauses, merge adjacent clauses or return to the source editor. Paragraph splitting is deterministic and retains the entire text; it does not use AI. If there are more than 40 paragraphs, the complete source starts as one editable clause instead of dropping paragraphs.
+
+Confirmation requires 1–40 clauses, at most 12,000 characters including separators, unique IDs, a concrete deliverable identified by you and one confirmation of the complete agreement. The basic usability check rejects empty/very short/repeated-word placeholders; it does not independently establish that the scope is meaningful or agreed. You remain responsible for reviewing the agreement. The complete confirmed text is reconstructed from the reviewed clauses, joined by blank lines, and is shown before saving. The content hash covers that text and the clause snapshot. Identity/time/hash/audit fields are supplied by the server.
+
+The original baseline is saved once, with an audit record in the same transaction. Concurrent confirmation is serialized on the project. Further confirmations return `BASELINE_ALREADY_CONFIRMED` (409); database triggers also reject updates/deletions of the original. Corrections require a new project, as specified. Accepted-change scope amendments are a later milestone.
+
+Once a baseline is confirmed, open Requests. Enter 10–4,000 trimmed characters and an INR hourly rate above zero through ₹100,000/hour, with at most two decimals. The decimal input is converted to integer paise without floating-point monetary multiplication. Request text, entered rate and current scope revision persist together with the submission audit event. The nullable database rate field preserves compatibility with any older request rows; all new intake requires a valid rate. A saved rate is an input, not an approved price. No estimate is created and no AI call occurs. All project requests are listed without pagination.
+
+### Document parsing boundaries
+
+- Parsing uses maintained Mammoth, PDF.js and yauzl libraries on the server. File extension, declared type and file signatures are checked; TXT decoding is strict UTF-8. DOCX archive contents are checked before text extraction. Raw parser diagnostics and file names/content are not logged.
+- Upload bodies are bounded before multipart parsing. Files are processed in memory in disposable workers; nothing is written to upload directories. The workers terminate on completion, failure, timeout or request cancellation. There are at most two active extraction workers per application process, a 15-second parse deadline and a 128 MB JavaScript heap limit per worker.
+- DOCX archives are limited to 1,000 entries and 16 MB of expanded content. PDFs over 100 pages are rejected. Any PDF page without readable text causes an explicit error so a scanned page is not silently omitted. Intentionally blank pages also trigger this conservative check. There is no OCR.
+- Extracted text over 12,000 characters is rejected, never silently truncated. Formatting may be lost during extraction; verify that all relevant terms are represented. Unreadable, password-protected, scanned, type-mismatched or unsupported files receive a paste-text alternative.
+- PDF.js, Mammoth and yauzl stay external to the Next.js server bundle so their companion worker/module paths remain usable in production. Full deployment packaging is verified in Milestone 8, not here.
+
+### Milestone 2 checks
+
+Use `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e -- --reporter=line` and `npm run test:runtime` (the test database setup above still applies). The test suite generates its own real PDF/DOCX/TXT fixtures under `tests`; runtime code never imports them. Browser tests also exercise project isolation, concurrent confirmation, DB immutability and transaction rollback. The runtime script checks baseline/request/rate persistence after an actual server restart and leaves its immutable verification record in the isolated `_test` database.
+
+Development tooling overrides pin patched `deepmerge-ts` and `mysql2` versions within Prisma's dependency tree. The application continues to use PostgreSQL; these patches address dependency audit advisories without changing the database/provider architecture.
