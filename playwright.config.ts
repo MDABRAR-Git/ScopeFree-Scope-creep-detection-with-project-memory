@@ -6,6 +6,8 @@ if (!process.env.TEST_PASSWORD) throw new Error("Set TEST_PASSWORD in .env.test 
 if (!process.env.TEST_EMAIL) throw new Error("Set TEST_EMAIL in .env.test (test credentials only).");
 export default defineConfig({
   testDir: "./tests/e2e", fullyParallel: false, workers: 1, retries: 0,
+  // Browser flows exercise two full viewport passes; allow headroom for cold starts on loaded machines/CI.
+  timeout: 60_000,
   expect: { timeout: 15000 },
   use: { baseURL: "http://localhost:3100", trace: "off", screenshot: "only-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
