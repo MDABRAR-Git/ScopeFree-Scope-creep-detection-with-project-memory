@@ -32,7 +32,7 @@ export async function confirmBaseline(projectId: string, input: unknown) {
   return getBaseline(projectId);
 }
 
-const requestSelect = { id: true, projectId: true, text: true, hourlyRatePaise: true, basedOnScopeRevision: true, createdAt: true } as const;
+const requestSelect = { id: true, projectId: true, text: true, hourlyRatePaise: true, basedOnScopeRevision: true, createdAt: true, estimate: { select: { id: true } } } as const;
 export async function listRequests(projectId: string) {
   await getProject(projectId);
   const requests = await database(() => db().changeRequest.findMany({ where: { projectId }, select: requestSelect, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }));

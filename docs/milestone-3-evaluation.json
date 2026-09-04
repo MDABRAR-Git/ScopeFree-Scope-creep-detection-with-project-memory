@@ -1,0 +1,256 @@
+{
+  "runs": [
+    {
+      "at": "2026-09-04T11:31:07.242Z",
+      "provider": "featherless",
+      "model": "Qwen/Qwen3.8-27B",
+      "promptVersion": "scope-v2",
+      "thinking": "false",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 2048,
+      "requestTimeoutMs": 60000,
+      "results": [
+        {
+          "id": "01-contact",
+          "elapsedMs": 25690,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "02-responsive",
+          "elapsedMs": 25367,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "03-gallery",
+          "elapsedMs": 31544,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "04-revision",
+          "elapsedMs": 37347,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "05-defect",
+          "elapsedMs": 31082,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "06-login",
+          "elapsedMs": 41204,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "07-payment",
+          "elapsedMs": 48632,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "08-booking",
+          "elapsedMs": 25433,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "09-language",
+          "elapsedMs": 36194,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "10-filter",
+          "elapsedMs": 29712,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "11-search",
+          "elapsedMs": 28976,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "12-dashboard",
+          "elapsedMs": 20334,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "13-pages",
+          "elapsedMs": 54868,
+          "categoriesMatch": false,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "14-images",
+          "elapsedMs": 22942,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "15-revisions",
+          "elapsedMs": 23571,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "16-inboxes",
+          "elapsedMs": 25496,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "17-vague",
+          "elapsedMs": 22466,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "18-integrate",
+          "elapsedMs": 15474,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "19-unclear-bug",
+          "elapsedMs": 23714,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "20-mixed",
+          "elapsedMs": 60011,
+          "error": "The AI request timed out or was cancelled. Please retry."
+        },
+        {
+          "id": "21-injection",
+          "elapsedMs": 20795,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "22-absent",
+          "elapsedMs": 42780,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "23-amendment",
+          "elapsedMs": 27710,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "24-superseded",
+          "elapsedMs": 25396,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "25-ambiguous-baseline",
+          "elapsedMs": 21377,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        }
+      ]
+    },
+    {
+      "at": "2026-09-04T11:36:30.284Z",
+      "provider": "featherless",
+      "model": "Qwen/Qwen3.8-27B",
+      "promptVersion": "scope-v3",
+      "thinking": "false",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 2048,
+      "requestTimeoutMs": 90000,
+      "results": [
+        {
+          "id": "01-contact",
+          "elapsedMs": 24545,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "13-pages",
+          "elapsedMs": 28923,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "20-mixed",
+          "elapsedMs": 59816,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "24-superseded",
+          "elapsedMs": 26372,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        },
+        {
+          "id": "25-ambiguous-baseline",
+          "elapsedMs": 26891,
+          "categoriesMatch": true,
+          "evidenceMatch": true,
+          "repaired": false
+        }
+      ]
+    }
+  ],
+  "liveBrowser": {
+    "promptVersion": "scope-v3",
+    "provider": "featherless",
+    "model": "Qwen/Qwen3.8-27B",
+    "status": "passed",
+    "tasks": 3,
+    "categories": [
+      "covered",
+      "modifies_existing",
+      "out_of_scope"
+    ],
+    "refresh": true,
+    "authenticatedReadback": true,
+    "evidenceLinks": true,
+    "viewports": [
+      1440,
+      390
+    ],
+    "screenshotsInspected": true
+  }
+}

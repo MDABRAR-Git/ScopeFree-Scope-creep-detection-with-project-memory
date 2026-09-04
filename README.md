@@ -1,8 +1,8 @@
 # ScopeFree
 
-A standalone workspace for keeping project agreements and scope changes connected. **Milestones 1–2: foundation, access, baseline and request intake** are implemented. The source documents describe the full intended application; they are not claims that all features are built.
+A standalone workspace for keeping project agreements and scope changes connected. Foundation, access, baseline/request intake and the Milestone 3 analysis workflow are implemented. See the milestone verification records for actual live results and limitations. The source documents describe the full intended application; they are not claims that all features are built.
 
-Available now: password login/logout, private projects, original-agreement paste/upload and clause confirmation, saved client requests with INR hourly rates, PostgreSQL persistence, shared Zod contracts and a server-only configurable AI transport. Live analysis, review/pricing, client proposals, Project Memory and chatbot arrive in Milestones 3–8. Baseline and Requests navigation is active; Memory/chat remain inactive. There is no runtime demo or seeded project content.
+Available now: password login/logout, private projects, original-agreement paste/upload and clause confirmation, saved client requests with INR hourly rates, live scope analysis with validated citations, immutable original estimates/initial revisions and PostgreSQL persistence. Review/pricing, client proposals, Project Memory and chatbot arrive in Milestones 4–8. Memory/chat remain inactive. There is no runtime demo or seeded project content.
 
 ## Prerequisites
 
@@ -32,18 +32,18 @@ With PostgreSQL 18 already installed, run `./scripts/local-postgres.ps1` in Powe
 - All implemented workspace pages and project API routes enforce sessions. Mutations (including login) require an exact trusted `Origin`; cross-site fetches are rejected. No GET handler changes state.
 - Login allows ten attempts per 15-minute window, persisted atomically in PostgreSQL. This single-freelancer global limit deliberately does not trust IP/proxy headers. Successful attempts also count; the window does not slide. After the limit, even a valid login must wait. An attacker can temporarily exhaust this budget; a public deployment should add an edge limiter appropriate to its trusted proxy.
 - Project names are trimmed, required and limited to 120 characters. Extra client fields are rejected. JSON request bodies are size-bounded. Projects use UUIDs and record a creation audit event atomically. One freelancer owns the whole workspace; project IDs are resource identifiers, not access credentials.
-- Migrations establish the relational models and session/throttling tables. Original baselines are now immutable at both service and database level. Later milestone services will enforce estimate/proposal snapshot immutability, evidence membership, approvals and transactional decisions. These later workflows are not implemented or verified yet. JSON contracts are schema-versioned; timestamps use timestamp-with-time-zone columns, and application database connections explicitly use UTC independent of the database host's timezone.
+- Migrations establish the relational models and session/throttling tables. Original baselines, AI estimate originals and saved revisions are protected at database level. Milestone 3 validates analysis evidence membership. Proposal immutability, approvals and transactional client decisions remain later milestones. JSON contracts are schema-versioned; timestamps use timestamp-with-time-zone columns, and application database connections explicitly use UTC independent of the database host's timezone.
 - API failures use `{error:{code,message,fields?,retryable}}` and `Cache-Control: no-store`. Raw provider/database errors, prompts, passwords, and session cookies are not included. Text is escaped by React. No public proposal/token API exists yet.
 
 ## AI configuration and replacement boundary
 
-`src/server/ai/provider.ts` exports the shared `AIProvider.generate` contract. It is guarded by `server-only`; UI and business logic do not import a provider SDK. Both future AI features will use this factory.
+`src/server/ai/provider.ts` exports the shared `AIProvider.generate` contract. It is guarded by `server-only`; UI and business logic do not import a provider SDK. Scope analysis uses this factory; the future chatbot will share it.
 
 Set `AI_PROVIDER=featherless`, `AI_BASE_URL=https://api.featherless.ai/v1`, `AI_MODEL` to a model your account can access and `AI_API_KEY` to the actual provider key. Do not prefix secrets with `NEXT_PUBLIC_`. Model and API access must be verified under your provider plan before live use; do not assume a chat subscription permits application/API traffic.
 
 For another compatible endpoint, change the environment configuration and set `AI_PROVIDER=openai-compatible`. Incompatible APIs need a new implementation of the interface and a factory entry, without changes to UI/business contracts. No automatic failover or provider-selection UI exists.
 
-Native JSON-schema output is off by default; enable `AI_NATIVE_JSON_SCHEMA=true` only after verifying the configured endpoint/model supports it. The adapter has a 30-second deadline, abort support, redirect rejection, bounded output and safe typed failures. Scope/chat prompts, source retrieval, response semantic validation and the one-repair flow are later milestones. No AI call is currently exposed in the application. Missing configuration throws `AI_NOT_CONFIGURED`; no runtime fixtures or substitutes exist. Current transport tests inject responses in tests only and do not prove live Featherless compatibility.
+Native JSON-schema output is off by default; enable `AI_NATIVE_JSON_SCHEMA=true` only after verifying the configured endpoint/model supports it. The adapter has a configurable 1–90 second per-call deadline (30 seconds by default), explicit cancellation/deadline settlement, redirect rejection, bounded output and safe typed failures. Scope analysis now uses separate prompts, source retrieval, strict schema/evidence validation and at most one repair. The chatbot remains a later milestone. Missing configuration throws `AI_NOT_CONFIGURED`; no runtime fixtures or substitutes exist. Automated transport tests inject responses in tests only; see the milestone report for observed live results.
 
 ## Verification
 
@@ -58,7 +58,7 @@ Browser/runtime verification uses a **separate disposable database whose name en
 
 Manual check: open the login page → enter a wrong password and inspect the error → log in → create a project → reload its overview → return to All projects → log out → open `/projects` and confirm login is required. Check at narrow/mobile width too. Stop/restart the application, log in again and confirm your project remains.
 
-See the [Milestone 1](docs/milestone-1.md) and [Milestone 2](docs/milestone-2.md) verification records for observed results and limitations. The imported [SPEC.md](SPEC.md), [AGENTS.md](AGENTS.md) and [TASKS.md](TASKS.md) preserve the handoff; their full-project checkboxes intentionally remain unchecked.
+See the [Milestone 1](docs/milestone-1.md), [Milestone 2](docs/milestone-2.md) and [Milestone 3](docs/milestone-3.md) verification records for observed results and limitations. The imported [SPEC.md](SPEC.md), [AGENTS.md](AGENTS.md) and [TASKS.md](TASKS.md) preserve the handoff; their full-project checkboxes intentionally remain unchecked.
 
 ## Baseline and request intake
 
@@ -83,3 +83,28 @@ Once a baseline is confirmed, open Requests. Enter 10–4,000 trimmed characters
 Use `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e -- --reporter=line` and `npm run test:runtime` (the test database setup above still applies). The test suite generates its own real PDF/DOCX/TXT fixtures under `tests`; runtime code never imports them. Browser tests also exercise project isolation, concurrent confirmation, DB immutability and transaction rollback. The runtime script checks baseline/request/rate persistence after an actual server restart and leaves its immutable verification record in the isolated `_test` database.
 
 Development tooling overrides pin patched `deepmerge-ts` and `mysql2` versions within Prisma's dependency tree. The application continues to use PostgreSQL; these patches address dependency audit advisories without changing the database/provider architecture.
+
+## Live scope analysis (Milestone 3)
+
+Save a request, then choose **Analyze Request**. The server retrieves the confirmed baseline and applicable accepted amendments, calls the configured live model and validates the result before saving. Covered work must have zero additional hours. Modified/new work contributes to the additional-hour range; uncertain tasks are excluded and make the total explicitly provisional. Each task shows evidence, assumptions, questions, risks and complexity. The result is labelled AI-generated and review required, never approved.
+
+Citation IDs and exact quotes must exist in the selected project's saved source set; matched clauses require supporting evidence. Links are constructed by the application. Validation verifies source existence and exact text, not the truth of every model interpretation or completeness of its task breakdown. Human review remains necessary. Requests and agreements are untrusted JSON data in the prompt; they cannot execute tools or SQL.
+
+The original result, complete input/source snapshot, first revision and audit event save atomically. PostgreSQL triggers protect original estimate fields and all saved revisions. A result is saved once per request; repeat calls return it. While a call is in progress, repeated submissions return `ANALYSIS_IN_PROGRESS`. A database lease expires after 150 seconds so crashed workers do not permanently block retries. A session can start six analyses per ten minutes. Failed provider attempts count; invalid input/missing configuration do not. Scope/request changes during inference reject the result without partial writes. No database transaction is held open while waiting for AI.
+
+`POST /api/requests/:requestId/analyze` accepts only `{idempotencyKey: UUID}` and uses the saved request/rate. `GET /api/estimates/:estimateId` requires the freelancer session. Initial revisions retain the entered rate for future review. `originalCalculatedJson` remains SQL NULL until the deterministic calculator arrives in Milestone 4; it may be filled once, then is immutable. No prices, approval, editing or proposal actions are exposed in this milestone.
+
+Analysis loads all applicable accepted amendments in the same project, excludes declined/superseded decisions and preserves the baseline. The amendment JSON contract is `{schemaVersion:1,clauses:[{id,text,amendsSourceIds:[]}]}`. Evidence source IDs are `baselineUUID:clauseId` or `decisionUUID:clauseId`. Malformed or foreign references fail explicitly. This is the analysis-side retrieval boundary; creating/accepting amendments and full Memory screens remain later milestones.
+
+### Model budgets and optional controls
+
+- `AI_CONTEXT_TOKENS` defaults to 32768; `AI_MAX_OUTPUT_TOKENS` defaults to 6000 (allowed 256–8192). Configure them within the actual endpoint/model limits. Input is budgeted conservatively by UTF-8 bytes, with 1024 reserved for message framing plus the output allowance. This is not an exact model tokenizer; it may reject text that could otherwise fit. Full sources and repair messages are never truncated to fit.
+- `AI_REQUEST_TIMEOUT_MS` defaults to 30000 and cannot exceed 90000. Analysis plus its one repair is bounded by 120 seconds. Truncated model responses are rejected. Repeated invalid structured responses return `AI_OUTPUT_INVALID`, never fixture output.
+- `AI_THINKING=default` sends no model-template control. `false` or `true` sends `chat_template_kwargs.enable_thinking`. Featherless documents this extension; other compatible endpoints may not support it. `AI_REASONING_EFFORT=default` omits the option; supported explicit values are low, medium, high, xhigh and max. Choose only a value supported by the selected model. Unsupported controls can be ignored or rejected upstream.
+- Changing provider/model/controls requires only server environment changes and an application restart. It does not rewrite saved originals. Reasoning text returned separately by providers is discarded and never persisted or shown. Native schema mode is still opt-in and must be separately verified.
+
+### Reproduce analysis verification
+
+`npm test` runs offline unit tests; live evaluations are skipped by default. `npm run test:e2e` starts a test-only HTTP provider from `tests/support` and the real production app against the isolated test database. The fake endpoint/key/model are explicitly passed to this test process; the application has no test switch, fixed-answer branch or fallback. `npm run test:runtime` checks persisted analysis after actual application restarts plus missing-AI/auth configuration and database outage.
+
+`npm run test:live` explicitly sends the 25 synthetic cases in `tests/evaluation/scope-cases.ts` to the real configured provider. It can consume provider usage. Classifications and expected evidence are labelled; no universal effort values are prescribed. Results are written incrementally to ignored `.local/evaluation/milestone-3-live.json`. For one case, use `npm run test:live -- -t 20-mixed`. `npm run test:live-browser` sends one synthetic mixed request through the actual UI/live provider on port 3300, retaining data only in the isolated test database. Screenshots remain ignored. Do not run database-mutating verification suites concurrently.

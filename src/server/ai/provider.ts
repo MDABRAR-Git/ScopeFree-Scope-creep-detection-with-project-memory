@@ -12,10 +12,10 @@ export interface AIProvider {
 }
 const configSchema = z.object({
   provider: z.enum(["featherless", "openai-compatible"]), baseUrl: z.url(),
-  model: z.string().trim().min(1), apiKey: z.string().trim().min(1), nativeSchema: z.enum(["true", "false"]),
+  model: z.string().trim().min(1), apiKey: z.string().trim().min(1), nativeSchema: z.enum(["true", "false"]), thinking: z.enum(["default", "true", "false"]), reasoningEffort: z.enum(["default", "low", "medium", "high", "xhigh", "max"]), timeoutMs: z.coerce.number().int().min(1000).max(90000),
 });
 export function createAIProvider(): AIProvider {
-  const parsed = configSchema.safeParse({ provider: process.env.AI_PROVIDER ?? "featherless", baseUrl: process.env.AI_BASE_URL ?? "https://api.featherless.ai/v1", model: process.env.AI_MODEL, apiKey: process.env.AI_API_KEY, nativeSchema: process.env.AI_NATIVE_JSON_SCHEMA ?? "false" });
+  const parsed = configSchema.safeParse({ provider: process.env.AI_PROVIDER ?? "featherless", baseUrl: process.env.AI_BASE_URL ?? "https://api.featherless.ai/v1", model: process.env.AI_MODEL, apiKey: process.env.AI_API_KEY, nativeSchema: process.env.AI_NATIVE_JSON_SCHEMA ?? "false", thinking: process.env.AI_THINKING ?? "default", reasoningEffort: process.env.AI_REASONING_EFFORT ?? "default", timeoutMs: process.env.AI_REQUEST_TIMEOUT_MS ?? 30000 });
   if (!parsed.success) throw new AppError("AI_NOT_CONFIGURED", "Configure the server AI provider, endpoint, model and API key before running AI features.", 503);
   const config = parsed.data;
   const url = new URL(config.baseUrl);
@@ -25,14 +25,30 @@ export function createAIProvider(): AIProvider {
 class OpenAICompatibleProvider implements AIProvider {
   constructor(private config: z.infer<typeof configSchema>) {}
   async generate(input: Parameters<AIProvider["generate"]>[0]) {
+    const controller = new AbortController();
+    const signal = AbortSignal.any([input.signal, controller.signal]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    const stopped = new Promise<never>((_, reject) => {
+      onAbort = () => reject(new AppError("AI_TIMEOUT", "The AI request timed out or was cancelled. Please retry.", 504, true));
+      signal.addEventListener("abort", onAbort, { once: true });
+      timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
+      if (signal.aborted) onAbort();
+    });
+    try { return await Promise.race([this.complete(input, signal), stopped]); }
+    finally { if (timer) clearTimeout(timer); if (onAbort) signal.removeEventListener("abort", onAbort); }
+  }
+  private async complete(input: Parameters<AIProvider["generate"]>[0], signal: AbortSignal) {
     const { config } = this;
     if (!Number.isInteger(input.maxOutputTokens) || input.maxOutputTokens < 1 || input.maxOutputTokens > 8192) throw new AppError("INVALID_INPUT", "The AI output limit is invalid.", 422);
-    const signal = AbortSignal.any([input.signal, AbortSignal.timeout(30_000)]);
+    if (signal.aborted) throw new AppError("AI_TIMEOUT", "The AI request was cancelled.", 504, true);
     try {
       const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
         method: "POST", signal, redirect: "error", cache: "no-store",
         headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: config.model, messages: input.messages, max_tokens: input.maxOutputTokens,
+          ...(config.thinking !== "default" ? { chat_template_kwargs: { enable_thinking: config.thinking === "true" } } : {}),
+          ...(config.reasoningEffort !== "default" ? { reasoning_effort: config.reasoningEffort } : {}),
           ...(input.responseSchema && config.nativeSchema === "true" ? { response_format: { type: "json_schema", json_schema: { name: "response", strict: true, schema: input.responseSchema } } } : {}),
         }),
       });
@@ -54,9 +70,9 @@ class OpenAICompatibleProvider implements AIProvider {
       let body: unknown;
       try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
       catch { throw new AppError("AI_OUTPUT_INVALID", "The AI provider returned an invalid response.", 502); }
-      const parsed = z.object({ choices: z.array(z.object({ message: z.object({ content: z.string().min(1) }), finish_reason: z.string().nullable().optional() })).min(1) }).safeParse(body);
+      const parsed = z.object({ model: z.string().min(1).max(200).optional(), choices: z.array(z.object({ message: z.object({ content: z.string().min(1) }), finish_reason: z.string().nullable().optional() })).min(1) }).safeParse(body);
       if (!parsed.success || parsed.data.choices[0].finish_reason === "length") throw new AppError("AI_OUTPUT_INVALID", "The AI provider returned an invalid or incomplete response.", 502);
-      return { text: parsed.data.choices[0].message.content, model: config.model, provider: config.provider };
+      return { text: parsed.data.choices[0].message.content, model: parsed.data.model ?? config.model, provider: config.provider };
     } catch (error) {
       if (error instanceof AppError) throw error;
       if (signal.aborted) throw new AppError("AI_TIMEOUT", "The AI request timed out or was cancelled. Please retry.", 504, true);

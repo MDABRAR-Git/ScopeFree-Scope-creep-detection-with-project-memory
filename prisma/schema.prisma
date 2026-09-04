@@ -41,6 +41,7 @@ model ChangeRequest {
   supersedesDecision   ProjectDecision? @relation("RequestSupersession", fields: [supersedesDecisionId], references: [id], onDelete: Restrict)
   createdAt            DateTime         @default(now()) @db.Timestamptz(3)
   estimate             Estimate?
+  analysisJob          AnalysisJob?
   @@index([projectId, createdAt])
 }
 
@@ -56,7 +57,7 @@ model Estimate {
   request                ChangeRequest    @relation(fields: [requestId], references: [id], onDelete: Restrict)
   originalAiJson         Json             @db.JsonB
   originalInputJson       Json             @db.JsonB
-  originalCalculatedJson Json             @db.JsonB
+  originalCalculatedJson Json?            @db.JsonB
   provider               String
   model                  String
   promptVersion          String
@@ -165,5 +166,19 @@ model WorkspaceSession {
 model LoginThrottle {
   id          String   @id
   attempts    Int
+  windowStart DateTime @db.Timestamptz(3)
+}
+
+model AnalysisJob {
+  requestId String @id @db.Uuid
+  request ChangeRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  leaseId String @unique @db.Uuid
+  idempotencyKey String @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+}
+
+model AnalysisThrottle {
+  sessionId String @id @db.Uuid
+  attempts Int
   windowStart DateTime @db.Timestamptz(3)
 }

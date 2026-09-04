@@ -7,5 +7,5 @@ export default defineConfig({
   testDir: "./tests/e2e", fullyParallel: false, workers: 1, retries: 0,
   use: { baseURL: "http://localhost:3100", trace: "off", screenshot: "only-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: { command: "npm run start -- --port 3100", url: "http://localhost:3100/login", reuseExistingServer: false, timeout: 120_000 },
+  webServer: { command: "node tests/support/start-e2e.mjs", url: "http://localhost:3100/login", reuseExistingServer: false, timeout: 120_000 },
 });

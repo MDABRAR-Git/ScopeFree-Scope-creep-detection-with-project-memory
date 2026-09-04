@@ -32,7 +32,7 @@ Build the complete approved workflow before polish. Do not add confidence labels
 
 ## Collaboration and delivery
 - Establish shared contracts and migrations before parallel feature work. Coordinate changes to schema, package lockfile and shared types.
-- Milestone 1 is committed and authorized for push to `abrar-dev`. For each subsequent milestone N, complete implementation, run its acceptance checks, fix failures and verify the relevant screens, then commit and push to `milestone-N` (for example, `milestone-2`). This supersedes the earlier instruction to use `abrar-dev` for every milestone. Keep commits small and coherent; preserve existing history and never force-push other contributors' work. Deployment still requires a separate user request.
+- Milestone 3 must be completed directly on `abrar-dev`, tested, committed with a clear milestone message and pushed to `origin/abrar-dev`, per the latest user instruction. Do not create or switch to another branch while completing it. The earlier `milestone-N` workflow remains for later milestones unless the user changes it. Keep commits small and coherent; preserve existing history and never force-push other contributors' work. Deployment still requires a separate user request.
 - Test high-risk boundaries: pricing, evidence, access, immutable revisions, transactional decisions and retrieval. Avoid redundant tests that merely mirror trivial UI implementation.
 - Provide migrations and a reproducible setup README. Do not commit databases, uploads, .env files, build outputs or dependency directories.
 - A task is complete only when its acceptance checks pass. Report what changed, what was tested and concrete limitations. Never claim live AI, deployment or evaluation succeeded without observing it.
