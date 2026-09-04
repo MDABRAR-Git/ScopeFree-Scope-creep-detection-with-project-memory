@@ -192,6 +192,16 @@
 .offer-manager { margin-top: 15px; border-color: #cbd8ce; background: #fafcf9; }
 .offer-manager > h3 { font-size: 17px; }
 .offer-manager > p { margin: 4px 0 15px; color: var(--muted); font-size: 12px; }
+.offer-send { margin: 0 0 16px; }
+.offer-send .review-field { margin-bottom: 12px; }
+.offer-send input[type=email] { display: block; width: 100%; min-width: 0; max-width: 100%; padding: 10px 12px; font: inherit; border: 1px solid #cbd6c5; border-radius: 7px; margin-top: 6px; }
+.offer-send input[type=email][aria-invalid="true"] { border-color: #b4443a; }
+.offer-current { font-size: 13px; margin: 12px 0; overflow-wrap: anywhere; }
+.offer-delivery { margin: 12px 0; padding: 12px 14px; border: 1px solid #d2ded5; border-radius: 8px; background: #f2f6f0; }
+.offer-delivery p { margin: 2px 0; font-size: 13px; overflow-wrap: anywhere; }
+.offer-delivery-sent { border-color: #b7d0bd; background: #eef5ef; }
+.offer-delivery-failed { border-color: #e0b4ad; background: #fbf1ef; }
+.offer-delivery-sending { border-color: #cdd4e2; background: #f0f3f8; }
 
 @media (max-width: 1100px) {
   .analysis-layout { grid-template-columns: minmax(0, 1fr); }

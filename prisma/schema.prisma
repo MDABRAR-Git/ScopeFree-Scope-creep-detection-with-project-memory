@@ -111,6 +111,13 @@ enum ProposalStatus {
   REVOKED
 }
 
+enum ProposalDeliveryStatus {
+  NONE
+  SENDING
+  SENT
+  FAILED
+}
+
 model Proposal {
   id                   String           @id @default(uuid()) @db.Uuid
   projectId            String           @db.Uuid
@@ -132,6 +139,16 @@ model Proposal {
   decidedAt            DateTime?        @db.Timestamptz(3)
   decisionComment      String?          @db.VarChar(500)
   createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  // Client email is a delivery destination, not a verified client identity. The bearer
+  // token still authorizes access. Legacy proposals predate email delivery and keep null.
+  clientEmail          String?          @db.VarChar(254)
+  deliveryStatus       ProposalDeliveryStatus @default(NONE)
+  deliverySentAt       DateTime?        @db.Timestamptz(3)
+  deliveryFailedAt     DateTime?        @db.Timestamptz(3)
+  deliveryAttempts     Int              @default(0)
+  deliveryFailureCategory String?       @db.VarChar(64)
+  deliveryFailureMessage  String?       @db.VarChar(300)
+  deliveryProviderMessageId String?     @db.VarChar(200)
   decision             ProjectDecision?
   @@index([projectId, createdAt])
   @@index([estimateId, createdAt])

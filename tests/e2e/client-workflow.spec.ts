@@ -25,11 +25,20 @@ async function reviewed(request:APIRequestContext,estimate:SavedEstimate,agreeme
   const approved=await request.post(`/api/estimates/${estimate.id}/approve`,{headers,data:{expectedRevision:next.currentRevision,reviewed:true}});expect(approved.status()).toBe(200);
   return (await approved.json()).estimate as SavedEstimate;
 }
-async function offer(request:APIRequestContext,estimate:SavedEstimate,key=randomUUID()){
-  const response=await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:estimate.currentRevision,idempotencyKey:key}});expect(response.status()).toBe(200);
-  const result=await response.json();
-  const token=new URLSearchParams(new URL(result.link).hash.slice(1)).get('token')!;
-  return {id:result.proposalId as string,token,link:result.link as string,auth:{...headers,Authorization:`Bearer ${token}`}};
+const inboxBase='http://127.0.0.1:3198';
+async function emailedLink(request:APIRequestContext,to:string){
+  const inbox=await (await request.get(`${inboxBase}/inbox?to=${encodeURIComponent(to)}`)).json() as {text:string}[];
+  expect(inbox.length).toBeGreaterThan(0);
+  const match=inbox[inbox.length-1].text.match(/https?:\/\/[^\s]*#token=[A-Za-z0-9_-]{43}/);
+  expect(match).not.toBeNull();
+  return match![0];
+}
+async function offer(request:APIRequestContext,estimate:SavedEstimate,key=randomUUID(),clientEmail=`client-${randomUUID().slice(0,8)}@example.com`){
+  const response=await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:estimate.currentRevision,idempotencyKey:key,clientEmail}});expect(response.status()).toBe(200);
+  const result=await response.json();expect(result.deliveryStatus).toBe('SENT');
+  const link=await emailedLink(request,clientEmail);
+  const token=new URLSearchParams(new URL(link).hash.slice(1)).get('token')!;
+  return {id:result.proposalId as string,token,link,clientEmail,auth:{...headers,Authorization:`Bearer ${token}`}};
 }
 async function ready(request:APIRequestContext){const projectId=await workspace(request),estimate=await reviewed(request,await analyzed(request,projectId));return {projectId,estimate,proposal:await offer(request,estimate)};}
 const decision=(request:APIRequestContext,p:{id:string;auth:Record<string,string>},outcome='accept',key=randomUUID(),comment='Agreed.')=>request.post(`/api/client/proposals/${p.id}/decision`,{headers:p.auth,data:{decision:outcome,confirmed:true,idempotencyKey:key,comment}});
@@ -39,7 +48,7 @@ test('new mutation routes require their own credentials and trusted origins',asy
   const {projectId,estimate,proposal:p}=await ready(request);
   const anonymous=await playwright.request.newContext({baseURL:origin});
   try {
-    for(const path of [`/api/projects/${projectId}/intake-link`,`/api/estimates/${estimate.id}/proposal`,...['link','revoke','revise'].map(a=>`/api/proposals/${p.id}/${a}`)]){
+    for(const path of [`/api/projects/${projectId}/intake-link`,`/api/estimates/${estimate.id}/proposal`,...['resend','revoke','revise'].map(a=>`/api/proposals/${p.id}/${a}`)]){
       expect((await anonymous.post(path,{headers,data:{}})).status()).toBe(401);
       expect((await request.post(path,{headers:{Origin:'https://foreign.example'},data:{}})).status()).toBe(403);
     }
@@ -78,12 +87,13 @@ test('client intake is scoped, private, idempotent, rate-free and explicitly rat
 
 test('sharing requires complete approved terms and preserves the client allowlist and one fixed charge',async({request})=>{
   const projectId=await workspace(request),estimate=await analyzed(request,projectId);
-  expect((await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:1,idempotencyKey:randomUUID()}})).status()).toBe(409);
+  expect((await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:1,idempotencyKey:randomUUID(),clientEmail:'client@example.com'}})).status()).toBe(409);
   const blocked=await request.post(`/api/estimates/${estimate.id}/approve`,{headers,data:{expectedRevision:1,reviewed:true}});expect(blocked.status()).toBe(422);expect((await blocked.json()).error.code).toBe('AGREEMENT_REQUIRED');
   estimate.draft.additionalChargePaise=50000;estimate.draft.additionalChargeReason='One-time configuration.';
   estimate.draft.analysis.tasks[0].risks=['Internal risk sentinel'];
   const saved=await reviewed(request,estimate),key=randomUUID(),p=await offer(request,saved,key);
-  const repeat=await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:saved.currentRevision,idempotencyKey:key}});expect(repeat.status()).toBe(200);expect((await repeat.json()).link).toBeNull();
+  const repeat=await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:saved.currentRevision,idempotencyKey:key,clientEmail:p.clientEmail}});expect(repeat.status()).toBe(200);expect((await repeat.json()).proposalId).toBe(p.id);
+  expect(((await (await request.get(`${inboxBase}/inbox?to=${encodeURIComponent(p.clientEmail)}`)).json()) as unknown[]).length).toBe(1);
   const read=await request.get(`/api/client/proposals/${p.id}`,{headers:p.auth});expect(read.status()).toBe(200);
   const value=await read.json();expect(value.offer.calculated.totalChargePaise.likely).toBe(250000);expect(value.offer.additionalChargeReason).toBe('One-time configuration.');
   const text=JSON.stringify(value);for(const field of ['originalAiJson','originalInputJson','Internal risk sentinel','editReason','promptVersion','tokenHash','"reviewed":'])expect(text.includes(field)).toBe(false);
@@ -91,7 +101,7 @@ test('sharing requires complete approved terms and preserves the client allowlis
   expect((await request.get(`/api/client/proposals/${p.id}`)).status()).toBe(404);
   expect((await request.get(`/api/client/proposals/${randomUUID()}`,{headers:p.auth})).status()).toBe(404);
   expect((await pool.query('SELECT count(*)::int n FROM "ProjectDecision" WHERE "projectId"=$1',[projectId])).rows[0].n).toBe(0);
-  const rotated=await action(request,p.id,saved.currentRevision,'link');expect(rotated.status()).toBe(200);
+  const rotated=await action(request,p.id,saved.currentRevision,'resend');expect(rotated.status()).toBe(200);
   expect((await decision(request,p)).status()).toBe(404);
   await expect(pool.query('UPDATE "Proposal" SET "snapshotJson"=\'{}\' WHERE "id"=$1',[p.id])).rejects.toMatchObject({code:'23514'});
 });
@@ -118,7 +128,7 @@ test('correction revokes the old offer and requires a new immutable review and a
   expect((await action(request,p.id,estimate.currentRevision,'revise')).status()).toBe(200);
   expect((await decision(request,p)).status()).toBe(410);
   expect((await request.post(`/api/estimates/${estimate.id}/approve`,{headers,data:{expectedRevision:estimate.currentRevision,reviewed:true}})).status()).toBe(409);
-  expect((await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:estimate.currentRevision,idempotencyKey:randomUUID()}})).status()).toBe(409);
+  expect((await request.post(`/api/estimates/${estimate.id}/proposal`,{headers,data:{expectedRevision:estimate.currentRevision,idempotencyKey:randomUUID(),clientEmail:'client@example.com'}})).status()).toBe(409);
   const current=(await (await request.get(`/api/estimates/${estimate.id}`)).json()).estimate as SavedEstimate;current.draft.hourlyRatePaise=150000;
   const replacement=await offer(request,await reviewed(request,current));expect(replacement.id).not.toBe(p.id);
   expect((await pool.query('SELECT "snapshotJson" FROM "Proposal" WHERE "id"=$1',[p.id])).rows[0]).toEqual(before);

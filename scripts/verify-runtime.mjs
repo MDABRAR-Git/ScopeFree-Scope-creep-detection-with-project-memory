@@ -7,18 +7,21 @@ import { setTimeout as delay } from 'node:timers/promises';
 import pg from 'pg';
 import { randomUUID } from 'node:crypto';
 import { startTestProvider } from '../tests/support/provider-server.mjs';
+import { startTestEmailServer } from '../tests/support/email-server.mjs';
 dotenv.config({ path: '.env.test', override: true, quiet: true });
 if (!process.env.DATABASE_URL || !new URL(process.env.DATABASE_URL).pathname.endsWith('_test')) throw new Error('Runtime checks require an isolated _test database.');
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const origin = 'http://localhost:3200';
+const emailOrigin = 'http://127.0.0.1:3197';
 const testProvider = await startTestProvider(3198);
+const testEmail = await startTestEmailServer(3197);
 let child;
 async function stop() {
   if (child && child.exitCode === null) { const closed = once(child, 'exit'); child.kill(); await closed; }
   child = undefined;
 }
 async function start(overrides = {}) {
-  child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', '3200'], { env: { ...process.env, NODE_ENV: 'production', APP_ORIGIN: origin, AI_PROVIDER: 'openai-compatible', AI_BASE_URL: 'http://127.0.0.1:3198/v1', AI_API_KEY: 'test-only-key', AI_MODEL: 'test-only-provider', AI_NATIVE_JSON_SCHEMA: 'false', ...overrides }, stdio: 'ignore', windowsHide: true });
+  child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', '3200'], { env: { ...process.env, NODE_ENV: 'production', APP_ORIGIN: origin, AI_PROVIDER: 'openai-compatible', AI_BASE_URL: 'http://127.0.0.1:3198/v1', AI_API_KEY: 'test-only-key', AI_MODEL: 'test-only-provider', AI_NATIVE_JSON_SCHEMA: 'false', EMAIL_PROVIDER: 'http-json', EMAIL_API_URL: `${emailOrigin}/emails`, EMAIL_API_KEY: 'test-only-email-key', EMAIL_FROM: 'proposals@scopefree.test', ...overrides }, stdio: 'ignore', windowsHide: true });
   for (let i = 0; i < 100; i++) {
     if (child.exitCode !== null) throw new Error('Verification server exited before startup.');
     try { if ((await fetch(`${origin}/login`)).ok) return; } catch {}
@@ -49,8 +52,13 @@ try {
   const agreement = { clauses: [{ id: 'A1', taskIds: [reviewDraft.analysis.tasks[0].id], text: 'The website now includes six responsive pages.', amendsSourceIds: [savedEstimate.sources[0].sourceId] }], supersedesDecisionId: null };
   const reviewed = await fetch(`${origin}/api/estimates/${savedEstimate.id}/review`, { method: "PUT", headers: { Origin: origin, Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ expectedRevision: 1, draft: reviewDraft, agreement, editReason: "Reviewed rate and fixed request charge." }) }); assert.equal(reviewed.status, 200);
   const approved = await post(`/api/estimates/${savedEstimate.id}/approve`, { expectedRevision: 2, reviewed: true }, cookie); assert.equal(approved.status, 200); savedEstimate = (await approved.json()).estimate;
-  const generated = await post(`/api/estimates/${savedEstimate.id}/proposal`, {expectedRevision:2,idempotencyKey:randomUUID()},cookie); assert.equal(generated.status,200);
-  const offer = await generated.json(), token = new URLSearchParams(new URL(offer.link).hash.slice(1)).get('token');
+  const clientEmail = 'client-runtime@example.com';
+  const generated = await post(`/api/estimates/${savedEstimate.id}/proposal`, {expectedRevision:2,idempotencyKey:randomUUID(),clientEmail},cookie); assert.equal(generated.status,200);
+  const offer = await generated.json(); assert.equal(offer.deliveryStatus,'SENT');
+  const inbox = await (await fetch(`${emailOrigin}/inbox?to=${encodeURIComponent(clientEmail)}`)).json();
+  const emailLink = inbox[inbox.length-1].text.match(/https?:\/\/[^\s]*#token=[A-Za-z0-9_-]{43}/)[0];
+  const token = new URLSearchParams(new URL(emailLink).hash.slice(1)).get('token');
+  console.log('PASS: approved proposal is emailed to the validated client address; the link is not returned to the freelancer.');
   const clientHeaders = { Origin:origin, Authorization:`Bearer ${token}`, 'Content-Type':'application/json' };
   const accepted = await fetch(`${origin}/api/client/proposals/${offer.proposalId}/decision`,{method:'POST',headers:clientHeaders,body:JSON.stringify({decision:'accept',confirmed:true,comment:'Proceed.',idempotencyKey:randomUUID()})});assert.equal(accepted.status,200);
   const savedDecision = (await accepted.json()).decision;
@@ -96,6 +104,7 @@ try {
 } finally {
   await stop();
   testProvider.close();
+  testEmail.close();
   // Confirmed baselines are immutable. Leave this isolated test record as verification history.
   if (projectId && !intakeCreated) { await pool.query('DELETE FROM "AuditEvent" WHERE "projectId"=$1', [projectId]); await pool.query('DELETE FROM "Project" WHERE "id"=$1', [projectId]); }
   await pool.end();

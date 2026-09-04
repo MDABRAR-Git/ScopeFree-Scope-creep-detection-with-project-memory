@@ -28,7 +28,8 @@ export async function getEstimate(estimateId: string) {
   const offers = estimate.proposals.map(p => {
     const snapshot = clientProposalSnapshotSchema.safeParse(p.snapshotJson);
     return { id: p.id, status: p.status, expiresAt: p.expiresAt.toISOString(), createdAt: p.createdAt.toISOString(), approvedRevisionId: p.approvedRevisionId,
-      replacesProposalId: p.replacesProposalId, comment: p.decisionComment, decidedAt: p.decidedAt?.toISOString() ?? null, offer: snapshot.success ? snapshot.data.client : null };
+      replacesProposalId: p.replacesProposalId, comment: p.decisionComment, decidedAt: p.decidedAt?.toISOString() ?? null, offer: snapshot.success ? snapshot.data.client : null,
+      delivery: { status: p.deliveryStatus, clientEmail: p.clientEmail, sentAt: p.deliverySentAt?.toISOString() ?? null, failedAt: p.deliveryFailedAt?.toISOString() ?? null, attempts: p.deliveryAttempts, failureCategory: p.deliveryFailureCategory, failureMessage: p.deliveryFailureMessage } };
   });
   const approvalEvents = await database(() => db().auditEvent.findMany({ where: { projectId: input.projectId, entityId: estimate.id, entityType: "estimate", action: { in: ["approved", "review_reopened"] } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true, action: true, revisionId: true, createdAt: true } }));
   return { id: estimate.id, projectId: input.projectId, requestId: input.requestId, requestText: input.requestText,

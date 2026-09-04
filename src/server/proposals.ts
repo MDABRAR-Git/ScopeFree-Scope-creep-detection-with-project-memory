@@ -4,10 +4,12 @@ import { projectIdSchema } from "@/lib/contracts";
 import { pinnedInputSchema, validateAnalysis } from "@/lib/analysis";
 import { validateAgreement } from "@/lib/agreement";
 import { readRevision, agreementRevisionSchema } from "@/lib/review";
-import { clientProposalSnapshotSchema, decisionInputSchema, generateProposalInputSchema, proposalActionInputSchema, publicOfferSchema, type ClientProposalView } from "@/lib/proposals";
+import { clientProposalSnapshotSchema, decisionInputSchema, emailProposalInputSchema, proposalActionInputSchema, resendProposalInputSchema, publicOfferSchema, type ClientProposalView } from "@/lib/proposals";
 import { db, database } from "./db";
 import { AppError } from "./errors";
 import { checkCredential, clientLink, expiry, newCredential, receipt, validateSupersession, type Transaction } from "./client-access";
+import { createEmailProvider, type EmailProvider } from "./email/provider";
+import { buildProposalEmail } from "./email/proposal-email";
 
 function validId(id: string) { if (!projectIdSchema.safeParse(id).success) throw new AppError("NOT_FOUND", "Offer or estimate not found.", 404); }
 async function lockEstimate(tx: Transaction, estimateId: string) {
@@ -40,25 +42,77 @@ async function approvedSnapshot(tx: Transaction, estimate: LockedEstimate, expec
   });
   return { snapshot: clientProposalSnapshotSchema.parse({ schemaVersion: 2, reviewed, client }), scopeRevision: pinned.scopeRevision };
 }
-export async function generateProposal(estimateId: string, body: unknown) {
-  validId(estimateId); const input = generateProposalInputSchema.parse(body);
-  return database(() => db().$transaction(async tx => {
+// Send the emailed proposal link outside any database transaction (never hold a transaction open
+// across an external request). Delivery is marked SENT only after the provider confirms submission;
+// on failure the immutable proposal and its token are preserved and delivery is marked FAILED so the
+// freelancer can Resend. The raw token is never stored or logged; only its hash lives in the row.
+async function deliverProposal(proposal: { id: string; clientEmail: string; expiresAt: Date }, token: string, projectName: string, provider: EmailProvider) {
+  const email = buildProposalEmail({ projectName, link: clientLink("proposals", proposal.id, token), expiresAt: proposal.expiresAt });
+  try {
+    const sent = await provider.send({ to: proposal.clientEmail, subject: email.subject, html: email.html, text: email.text, signal: AbortSignal.timeout(90000) });
+    await database(() => db().proposal.updateMany({ where: { id: proposal.id, status: "PENDING" }, data: { deliveryStatus: "SENT", deliverySentAt: new Date(), deliveryProviderMessageId: sent.providerMessageId, deliveryFailureCategory: null, deliveryFailureMessage: null } }));
+    return "SENT" as const;
+  } catch (error) {
+    const category = error instanceof AppError ? error.code : "EMAIL_SEND_FAILED";
+    const message = error instanceof AppError ? error.message : "The email could not be delivered.";
+    await database(() => db().proposal.updateMany({ where: { id: proposal.id, status: "PENDING" }, data: { deliveryStatus: "FAILED", deliveryFailedAt: new Date(), deliveryFailureCategory: category.slice(0, 64), deliveryFailureMessage: message.slice(0, 300) } })).catch(() => { /* preserve the offer even if the status write fails */ });
+    throw error;
+  }
+}
+export async function emailProposal(estimateId: string, body: unknown, providerArg?: EmailProvider) {
+  validId(estimateId); const input = emailProposalInputSchema.parse(body);
+  // Fail fast on missing configuration before creating an undeliverable offer.
+  const provider = providerArg ?? createEmailProvider();
+  const created = await database(() => db().$transaction(async tx => {
     const estimate = await lockEstimate(tx, estimateId);
-    const op = await receipt(tx, `offer:${estimateId}`, input.idempotencyKey, { expectedRevision: input.expectedRevision });
-    if (op.previous) return { ...op.previous.resultJson as object, link: null };
-    if (estimate.currentProposal && estimate.currentProposal.status !== "REVOKED") throw new AppError("ESTIMATE_LOCKED", "This estimate already has an offer. Use its existing link or rotate access.", 409);
-    if (estimate.status !== "APPROVED") throw new AppError("ESTIMATE_LOCKED", "Approve this saved review before generating an offer.", 409);
+    const op = await receipt(tx, `offer:${estimateId}`, input.idempotencyKey, { expectedRevision: input.expectedRevision, clientEmail: input.clientEmail });
+    if (op.previous) return { repeat: op.previous.resultJson as Record<string, unknown> };
+    if (estimate.currentProposal && estimate.currentProposal.status !== "REVOKED") throw new AppError("ESTIMATE_LOCKED", "This estimate already has an offer. Revoke it before emailing a new one.", 409);
+    if (estimate.status !== "APPROVED") throw new AppError("ESTIMATE_LOCKED", "Approve this saved review before emailing an offer.", 409);
     const { snapshot, scopeRevision } = await approvedSnapshot(tx, estimate, input.expectedRevision);
     const credential = newCredential();
-    const proposal = await tx.proposal.create({ data: { projectId: estimate.request.projectId, estimateId, approvedRevisionId: estimate.approvedRevisionId!, snapshotJson: snapshot, basedOnScopeRevision: scopeRevision, tokenHash: credential.tokenHash, expiresAt: expiry("offer"), replacesProposalId: estimate.currentProposalId } });
+    const proposal = await tx.proposal.create({ data: { projectId: estimate.request.projectId, estimateId, approvedRevisionId: estimate.approvedRevisionId!, snapshotJson: snapshot, basedOnScopeRevision: scopeRevision, tokenHash: credential.tokenHash, expiresAt: expiry("offer"), replacesProposalId: estimate.currentProposalId, clientEmail: input.clientEmail, deliveryStatus: "SENDING", deliveryAttempts: 1 } });
     await tx.estimate.update({ where: { id: estimateId }, data: { status: "PROPOSED", currentProposalId: proposal.id } });
-    await tx.auditEvent.create({ data: { projectId: proposal.projectId, entityType: "proposal", entityId: proposal.id, action: "offer_generated", actorType: "freelancer", revisionId: proposal.approvedRevisionId, metadataJson: { replacesProposalId: proposal.replacesProposalId } } });
-    const result = { proposalId: proposal.id, expiresAt: proposal.expiresAt.toISOString() };
+    await tx.auditEvent.create({ data: { projectId: proposal.projectId, entityType: "proposal", entityId: proposal.id, action: "offer_generated", actorType: "freelancer", revisionId: proposal.approvedRevisionId, metadataJson: { replacesProposalId: proposal.replacesProposalId, delivery: "email" } } });
+    const result = { proposalId: proposal.id, clientEmail: input.clientEmail, expiresAt: proposal.expiresAt.toISOString(), deliveryStatus: "SENDING" as const };
     await op.save(result);
-    return { ...result, link: clientLink("proposals", proposal.id, credential.token) };
+    return { proposalId: proposal.id, token: credential.token, clientEmail: input.clientEmail, projectName: estimate.request.project.name, expiresAt: proposal.expiresAt, result };
   }));
+  // Idempotent double-click: return the saved result without sending a second email.
+  if ("repeat" in created) return created.repeat;
+  const status = await deliverProposal({ id: created.proposalId, clientEmail: created.clientEmail, expiresAt: created.expiresAt }, created.token, created.projectName, provider);
+  return { ...created.result, deliveryStatus: status };
 }
-export async function manageProposal(id: string, action: "rotate" | "revoke" | "revise", body: unknown) {
+export async function resendProposal(id: string, body: unknown, providerArg?: EmailProvider) {
+  validId(id); const input = resendProposalInputSchema.parse(body);
+  const provider = providerArg ?? createEmailProvider();
+  const prepared = await database(() => db().$transaction(async tx => {
+    const ref = await tx.proposal.findUnique({ where: { id } });
+    if (!ref) throw new AppError("NOT_FOUND", "Offer not found.", 404);
+    const estimate = await lockEstimate(tx, ref.estimateId);
+    await tx.$queryRaw`SELECT "id" FROM "Proposal" WHERE "id"=${id}::uuid FOR UPDATE`;
+    const proposal = await tx.proposal.findUniqueOrThrow({ where: { id } });
+    const op = await receipt(tx, `offer-resend:${id}`, input.idempotencyKey, { expectedRevision: input.expectedRevision });
+    if (op.previous) return { repeat: op.previous.resultJson as Record<string, unknown> };
+    if (estimate.currentRevision !== input.expectedRevision) throw new AppError("STALE_REVISION", "A newer review exists. Reload before resending this offer.", 409);
+    if (estimate.currentProposalId !== id || proposal.status !== "PENDING") throw new AppError("ALREADY_DECIDED", "This offer is no longer pending. Its saved result cannot be changed.", 409);
+    if (!proposal.clientEmail) throw new AppError("INVALID_INPUT", "This offer has no saved client email to resend to.", 422);
+    // A resend must use a currently valid secure token. The prior raw token is unrecoverable, so
+    // rotate: issue a new token/expiry (revoking the previous one) using the same rotation logic.
+    await approvedSnapshot(tx, estimate, input.expectedRevision);
+    const credential = newCredential();
+    const nextExpiry = expiry("offer");
+    await tx.proposal.update({ where: { id }, data: { tokenHash: credential.tokenHash, expiresAt: nextExpiry, deliveryStatus: "SENDING", deliveryAttempts: { increment: 1 } } });
+    await tx.auditEvent.create({ data: { projectId: proposal.projectId, entityType: "proposal", entityId: id, action: "offer_resent", actorType: "freelancer", revisionId: proposal.approvedRevisionId, metadataJson: {} } });
+    const result = { proposalId: id, clientEmail: proposal.clientEmail, expiresAt: nextExpiry.toISOString(), deliveryStatus: "SENDING" as const };
+    await op.save(result);
+    return { proposalId: id, token: credential.token, clientEmail: proposal.clientEmail, projectName: estimate.request.project.name, expiresAt: nextExpiry, result };
+  }));
+  if ("repeat" in prepared) return prepared.repeat;
+  const status = await deliverProposal({ id: prepared.proposalId, clientEmail: prepared.clientEmail, expiresAt: prepared.expiresAt }, prepared.token, prepared.projectName, provider);
+  return { ...prepared.result, deliveryStatus: status };
+}
+export async function manageProposal(id: string, action: "revoke" | "revise", body: unknown) {
   validId(id); const input = proposalActionInputSchema.parse(body);
   return database(() => db().$transaction(async tx => {
     const ref = await tx.proposal.findUnique({ where: { id } });
@@ -67,24 +121,16 @@ export async function manageProposal(id: string, action: "rotate" | "revoke" | "
     await tx.$queryRaw`SELECT "id" FROM "Proposal" WHERE "id"=${id}::uuid FOR UPDATE`;
     const proposal = await tx.proposal.findUniqueOrThrow({ where: { id } });
     const op = await receipt(tx, `offer-action:${id}`, input.idempotencyKey, { action, expectedRevision: input.expectedRevision });
-    if (op.previous) return { ...op.previous.resultJson as object, link: null };
+    if (op.previous) return op.previous.resultJson as object;
     if (estimate.currentRevision !== input.expectedRevision) throw new AppError("STALE_REVISION", "A newer review exists. Reload before changing this offer.", 409);
     if (estimate.currentProposalId !== id || proposal.status !== "PENDING") throw new AppError("ALREADY_DECIDED", "This offer is no longer pending. Its saved result cannot be changed.", 409);
-    let link: string | null = null;
-    if (action === "rotate") {
-      await approvedSnapshot(tx, estimate, input.expectedRevision);
-      const credential = newCredential();
-      await tx.proposal.update({ where: { id }, data: { tokenHash: credential.tokenHash, expiresAt: expiry("offer") } });
-      link = clientLink("proposals", id, credential.token);
-    } else {
-      await tx.proposal.update({ where: { id }, data: { status: "REVOKED", revokedAt: new Date() } });
-      await tx.estimate.update({ where: { id: estimate.id }, data: { status: "REVIEW_REQUIRED", approvedRevisionId: null } });
-      await tx.auditEvent.create({ data: { projectId: proposal.projectId, entityType: "estimate", entityId: estimate.id, action: "review_reopened", actorType: "freelancer", revisionId: proposal.approvedRevisionId, metadataJson: { revokedProposalId: id } } });
-    }
-    await tx.auditEvent.create({ data: { projectId: proposal.projectId, entityType: "proposal", entityId: id, action: action === "rotate" ? "offer_link_rotated" : action === "revise" ? "offer_revoked_for_revision" : "offer_revoked", actorType: "freelancer", revisionId: proposal.approvedRevisionId, metadataJson: {} } });
+    await tx.proposal.update({ where: { id }, data: { status: "REVOKED", revokedAt: new Date() } });
+    await tx.estimate.update({ where: { id: estimate.id }, data: { status: "REVIEW_REQUIRED", approvedRevisionId: null } });
+    await tx.auditEvent.create({ data: { projectId: proposal.projectId, entityType: "estimate", entityId: estimate.id, action: "review_reopened", actorType: "freelancer", revisionId: proposal.approvedRevisionId, metadataJson: { revokedProposalId: id } } });
+    await tx.auditEvent.create({ data: { projectId: proposal.projectId, entityType: "proposal", entityId: id, action: action === "revise" ? "offer_revoked_for_revision" : "offer_revoked", actorType: "freelancer", revisionId: proposal.approvedRevisionId, metadataJson: {} } });
     const result = { proposalId: id, estimateId: estimate.id };
     await op.save(result);
-    return { ...result, link };
+    return result;
   }));
 }
 export async function getClientProposal(id: string, hash: string): Promise<ClientProposalView> {

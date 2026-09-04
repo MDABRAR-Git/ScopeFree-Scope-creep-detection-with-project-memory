@@ -29,8 +29,11 @@ async function pending(request: APIRequestContext, projectId: string, supersedes
   const revision = await request.put(`/api/estimates/${estimate.id}/review`, { headers, data: { expectedRevision: 1, draft: estimate.draft, agreement, editReason: "Confirm launch page scope." } });
   estimate = (await revision.json()).estimate;
   expect((await request.post(`/api/estimates/${estimate.id}/approve`, { headers, data: { expectedRevision: estimate.currentRevision, reviewed: true } })).status()).toBe(200);
-  const proposal = await request.post(`/api/estimates/${estimate.id}/proposal`, { headers, data: { expectedRevision: estimate.currentRevision, idempotencyKey: randomUUID() } });
-  const body = await proposal.json(), token = new URLSearchParams(new URL(body.link).hash.slice(1)).get("token")!;
+  const clientEmail = `memory-${randomUUID().slice(0, 8)}@example.com`;
+  const proposal = await request.post(`/api/estimates/${estimate.id}/proposal`, { headers, data: { expectedRevision: estimate.currentRevision, idempotencyKey: randomUUID(), clientEmail } });
+  const body = await proposal.json();
+  const inbox = await (await request.get(`http://127.0.0.1:3198/inbox?to=${encodeURIComponent(clientEmail)}`)).json() as { text: string }[];
+  const token = new URLSearchParams(new URL(inbox[inbox.length - 1].text.match(/https?:\/\/[^\s]*#token=[A-Za-z0-9_-]{43}/)![0]).hash.slice(1)).get("token")!;
   return { estimate, proposalId: body.proposalId as string, token, requestId };
 }
 
@@ -126,8 +129,11 @@ test("supersession, declined replacements, stale, expired, revoked and replaced 
   const saved = await request.put(`/api/estimates/${old.estimate.id}/review`, { headers, data: { expectedRevision: old.estimate.currentRevision, draft: old.estimate.draft, agreement: old.estimate.agreement, editReason: "Replace the revoked client offer." } });
   const revised = (await saved.json()).estimate as SavedEstimate;
   expect((await request.post(`/api/estimates/${revised.id}/approve`, { headers, data: { expectedRevision: revised.currentRevision, reviewed: true } })).status()).toBe(200);
-  const generated = await request.post(`/api/estimates/${revised.id}/proposal`, { headers, data: { expectedRevision: revised.currentRevision, idempotencyKey: randomUUID() } });
-  const generatedBody = await generated.json(), newToken = new URLSearchParams(new URL(generatedBody.link).hash.slice(1)).get("token")!;
+  const replacementEmail = `memory-${randomUUID().slice(0, 8)}@example.com`;
+  const generated = await request.post(`/api/estimates/${revised.id}/proposal`, { headers, data: { expectedRevision: revised.currentRevision, idempotencyKey: randomUUID(), clientEmail: replacementEmail } });
+  const generatedBody = await generated.json();
+  const replacementInbox = await (await request.get(`http://127.0.0.1:3198/inbox?to=${encodeURIComponent(replacementEmail)}`)).json() as { text: string }[];
+  const newToken = new URLSearchParams(new URL(replacementInbox[replacementInbox.length - 1].text.match(/https?:\/\/[^\s]*#token=[A-Za-z0-9_-]{43}/)![0]).hash.slice(1)).get("token")!;
   const finalDecision = await decide(request, { proposalId: generatedBody.proposalId, token: newToken }, "accept", "Revised offer accepted.");
   const detail = (await (await request.get(`/api/projects/${historyProject}/memory/${finalDecision}`)).json()).decision;
   expect(detail.offerHistory.map((offer: { state: string }) => offer.state)).toEqual(["REPLACED", "FINAL_ACCEPTED"]);

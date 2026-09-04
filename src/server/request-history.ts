@@ -34,6 +34,7 @@ export async function getRequestHistory(projectId: string) {
       id: request.id, requestNumber: request.requestNumber, summary: request.summary, description: request.text,
       createdAt: request.createdAt.toISOString(), classification, estimateId: estimate?.id ?? null,
       status: estimate?.status ?? "NOT_ANALYZED", origin: request.origin, offerStatus: proposal ? proposal.status === "PENDING" && expired ? "EXPIRED" : proposal.status : null,
+      delivery: proposal ? { status: proposal.deliveryStatus, clientEmail: proposal.clientEmail, sentAt: proposal.deliverySentAt?.toISOString() ?? null } : null,
       clientAcceptance, acceptedAt: accepted ? decision.decidedAt.toISOString() : null,
       hourlyRatePaise: snapshot?.hourlyRatePaise ?? request.hourlyRatePaise,
       billing, additionalChargeReason: snapshot?.additionalChargeReason ?? "", reviewed, additional, stale,
