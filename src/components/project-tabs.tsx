@@ -16,6 +16,7 @@ export function ProjectTabs({ projectId, projectName }: { projectId: string; pro
     { label: "Baseline", href: `${root}/baseline`, Icon: FileText },
     { label: "Requirements", href: `${root}/requests`, Icon: ListChecks },
     { label: "Project Memory", href: `${root}/memory`, Icon: BookOpen },
+    { label: "Project AI Chatbot", href: `${root}/chat`, Icon: MessageSquare },
   ];
 
   return <div className={`project-navigation${collapsed ? " collapsed" : ""}${mobileOpen ? " mobile-open" : ""}`}>
@@ -30,7 +31,6 @@ export function ProjectTabs({ projectId, projectName }: { projectId: string; pro
       </header>
       <nav id="project-sections" className="project-tabs" aria-label="Project sections">
         {sections.map(({ label, href, Icon }) => <Link key={href} className={`project-tab ${activePath === href ? "selected" : ""}`} href={href} aria-current={activePath === href ? "page" : undefined} title={collapsed ? label : undefined} onClick={() => setMobileOpen(false)}><Icon size={18} aria-hidden="true" /><span>{label}</span></Link>)}
-        <span className="project-tab unavailable" aria-disabled="true" title="Available in Milestone 7"><MessageSquare size={18} aria-hidden="true" /><span>Project AI Chatbot</span><small>Milestone 7</small></span>
       </nav>
     </aside>
   </div>;
