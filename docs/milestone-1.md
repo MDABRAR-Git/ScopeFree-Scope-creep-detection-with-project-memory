@@ -56,4 +56,4 @@ Failures fixed before the passing run:
 - Chromium with desktop/mobile viewport sizes was tested. Physical mobile devices, Firefox, Safari and a comprehensive accessibility audit were not tested.
 - A fresh checkout on another machine, deployed HTTPS behavior and full release verification are deferred to Milestone 8. Production Secure cookie flags were verified locally.
 - The single-freelancer login limit is global; repeated successful logins also consume the ten-attempt/15-minute budget. This is documented in README.
-- No push or deployment was performed. The milestone is checkpointed on `milestone-1-foundation`; obtain its commit with `git log -1 --oneline`.
+- No push or deployment was performed. Milestone 1 is checkpointed as `c9e307b` on `abrar-dev`. The user subsequently specified `abrar-dev` for every milestone; the local branch was fast-forwarded to the existing checkpoint without rewriting it.
