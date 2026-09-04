@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Project {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(120)
+  scopeRevision Int      @default(0)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  baseline      Baseline?
+  requests      ChangeRequest[]
+  proposals     Proposal[]
+  decisions     ProjectDecision[]
+  auditEvents   AuditEvent[]
+}
+
+model Baseline {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @unique @db.Uuid
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  text        String
+  clausesJson Json     @db.JsonB
+  contentHash String
+  confirmedAt DateTime @db.Timestamptz(3)
+  confirmedBy String
+}
+
+model ChangeRequest {
+  id                   String           @id @default(uuid()) @db.Uuid
+  projectId            String           @db.Uuid
+  project              Project          @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  text                 String
+  basedOnScopeRevision Int
+  supersedesDecisionId String?          @db.Uuid
+  supersedesDecision   ProjectDecision? @relation("RequestSupersession", fields: [supersedesDecisionId], references: [id], onDelete: Restrict)
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  estimate             Estimate?
+  @@index([projectId, createdAt])
+}
+
+enum EstimateStatus {
+  REVIEW_REQUIRED
+  APPROVED
+  PROPOSED
+}
+
+model Estimate {
+  id                     String           @id @default(uuid()) @db.Uuid
+  requestId              String           @unique @db.Uuid
+  request                ChangeRequest    @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  originalAiJson         Json             @db.JsonB
+  originalInputJson       Json             @db.JsonB
+  originalCalculatedJson Json             @db.JsonB
+  provider               String
+  model                  String
+  promptVersion          String
+  currentRevision        Int
+  status                 EstimateStatus   @default(REVIEW_REQUIRED)
+  approvedRevisionId     String?          @unique @db.Uuid
+  approvedRevision       EstimateRevision? @relation("EstimateApproval", fields: [approvedRevisionId], references: [id], onDelete: Restrict)
+  revisions              EstimateRevision[] @relation("EstimateRevisions")
+  proposal               Proposal?
+  createdAt              DateTime         @default(now()) @db.Timestamptz(3)
+}
+
+model EstimateRevision {
+  id           String   @id @default(uuid()) @db.Uuid
+  estimateId   String   @db.Uuid
+  estimate     Estimate @relation("EstimateRevisions", fields: [estimateId], references: [id], onDelete: Restrict)
+  revision     Int
+  snapshotJson Json     @db.JsonB
+  editReason   String?
+  createdBy    String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  approvedBy   Estimate? @relation("EstimateApproval")
+  proposals    Proposal[]
+  auditEvents  AuditEvent[]
+  @@unique([estimateId, revision])
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
+model Proposal {
+  id                   String           @id @default(uuid()) @db.Uuid
+  projectId            String           @db.Uuid
+  project              Project          @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  estimateId           String           @unique @db.Uuid
+  estimate             Estimate         @relation(fields: [estimateId], references: [id], onDelete: Restrict)
+  approvedRevisionId   String           @db.Uuid
+  approvedRevision     EstimateRevision @relation(fields: [approvedRevisionId], references: [id], onDelete: Restrict)
+  snapshotJson         Json             @db.JsonB
+  basedOnScopeRevision Int
+  status               ProposalStatus   @default(PENDING)
+  tokenHash            String?          @unique
+  expiresAt            DateTime         @db.Timestamptz(3)
+  revokedAt            DateTime?        @db.Timestamptz(3)
+  decidedAt            DateTime?        @db.Timestamptz(3)
+  decisionComment      String?          @db.VarChar(500)
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  decision             ProjectDecision?
+  @@index([projectId, createdAt])
+}
+
+enum DecisionOutcome {
+  ACCEPTED
+  DECLINED
+}
+
+model ProjectDecision {
+  id                   String          @id @default(uuid()) @db.Uuid
+  projectId            String          @db.Uuid
+  project              Project         @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  proposalId           String          @unique @db.Uuid
+  proposal             Proposal        @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  outcome              DecisionOutcome
+  title                String
+  tagsJson             Json            @db.JsonB
+  finalDecisionText    String
+  sourceReferencesJson Json            @db.JsonB
+  approvedSnapshotJson Json            @db.JsonB
+  amendmentClausesJson Json            @db.JsonB
+  supersedesDecisionId String?         @unique @db.Uuid
+  supersedesDecision   ProjectDecision? @relation("DecisionSupersession", fields: [supersedesDecisionId], references: [id], onDelete: Restrict)
+  supersededBy         ProjectDecision? @relation("DecisionSupersession")
+  replacementRequests ChangeRequest[] @relation("RequestSupersession")
+  scopeRevisionAfter   Int
+  decidedAt            DateTime        @db.Timestamptz(3)
+  @@index([projectId, decidedAt])
+}
+
+model AuditEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @db.Uuid
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  entityType   String
+  entityId     String   @db.Uuid
+  action       String
+  actorType    String
+  revisionId   String?  @db.Uuid
+  revision     EstimateRevision? @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  metadataJson Json     @db.JsonB
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  @@index([projectId, createdAt])
+}
+
+model WorkspaceSession {
+  id                String   @id @default(uuid()) @db.Uuid
+  credentialVersion String
+  expiresAt         DateTime @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  @@index([expiresAt])
+}
+
+model LoginThrottle {
+  id          String   @id
+  attempts    Int
+  windowStart DateTime @db.Timestamptz(3)
+}
