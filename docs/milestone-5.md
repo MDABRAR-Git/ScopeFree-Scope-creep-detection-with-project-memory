@@ -1,6 +1,6 @@
-# Milestone 5 plan — Client requests, offers and decisions
+# Milestone 5 — Client requests, offers and decisions
 
-Status: proposed implementation plan, not implemented or verified. Prepared against `abrar-dev` at `bf2848e`. This document does not supersede approved requirements until the proposed choices are accepted. Implementation, tests, commits and pushes stay on `abrar-dev` / `origin/abrar-dev`. No deployment.
+Status: implemented on `abrar-dev` following the user’s request to start this plan. The approved choices below supersede conflicting older handoff text. Build, lint, typecheck, offline tests, database/browser regressions, migration preservation and production restart checks have passed. The real-provider acceptance and subsequent-analysis check also passed. Commits and pushes stay on `abrar-dev` / `origin/abrar-dev`. No deployment.
 
 ## Outcome and scope
 
@@ -10,10 +10,10 @@ Also support the existing freelancer-entered requests. Retain IN_SCOPE / MODIFIC
 
 Project Memory browsing/search and the chatbot remain later milestones. No accounts, automatic messages, payments, invoices, timeline estimates, confidence scores, extra pricing categories or runtime fixtures.
 
-## Proposed product choices
+## Approved product choices
 
 - Interpret the approved “client intake” scope as direct, text-only client request submission through a dedicated project link. The link permits submission and a receipt, not browsing project requests, the baseline, drafts or finances. Existing freelancer intake stays available.
-- Use separate credentials for request submission and each offer. Proposed configurable expiry defaults: 30 days for an intake link and 7 days for an offer link. Both support explicit revocation/rotation. Repeated submissions are allowed until intake access expires or is revoked; retries with the same idempotency key do not create another request.
+- Use separate credentials for request submission and each offer. Configurable expiry defaults: 30 days for an intake link and 7 days for an offer link. Both support explicit revocation/rotation. Repeated submissions are allowed until intake access expires or is revoked; retries with the same idempotency key do not create another request.
 - Clients submit request text only (10–4,000 trimmed characters). They cannot set rates, effort, classification or money. Store client-originated requests with no rate and show “Needs hourly rate”; the freelancer sets a valid rate before analysis. Do not substitute a zero rate or invoke AI automatically.
 - Correct a pending offer on the same request: revoke its access and clear internal approval atomically before unlocking edits. Preserve the old offer, then save a new revision, reapprove it and generate a new offer/link. Accepted and declined offers are final; new negotiated work uses a new request.
 - A request or offer made stale by a scope change requires a new current-scope request/analysis, consistent with the existing stale-scope rule. Retain the old record and show the reason; do not rewrite pinned inputs or silently rebase historical work.
@@ -86,3 +86,22 @@ Adapt Request History and Additional Requests to proposal history without multip
 ## Delivery
 
 Implement sequentially in the order above; establish shared contracts and the migration before UI/service work. Use small coherent commits for storage/contracts, intake, offers/revision, decisions/history and verification. Update README and this document with observed results and limitations. Push completed, verified work only to `origin/abrar-dev`; do not deploy.
+
+## Implementation and verification — September 4, 2026
+
+Implemented the full intake → rate → analysis → saved agreement/review → approval → shared offer → client decision flow. Requests retain their identity across revoked/replacement offers; final decisions and offer content have database immutability guards. Pending-offer correction records revocation and review reopening atomically, and the backend refuses reapproval until a new review revision is saved. Saved agreement terms are visible in the current review, earlier revisions and frozen offers.
+
+Observed checks:
+
+- `npm run build`, `npm run typecheck`, `npm run lint` and `git diff --check`: passed.
+- `npm test`: 68 passed; 25 explicitly live evaluation cases skipped by this offline command.
+- `npm run test:e2e -- --reporter=line`: 48 passed against the real production server and isolated PostgreSQL test database with a test-only provider. Includes new route credential/origin checks, rate-free client intake, idempotency/body conflicts, link rotation/expiry, client allowlist and fixed pricing, immutable corrections, concurrent same/opposite decisions, two-offer scope races, rollback at every acceptance write, IN_SCOPE/decline behavior, supersession and future source retrieval. Existing access/intake/review regressions passed.
+- Browser checks covered 1440px desktop and 390px mobile, keyboard submission/decision, confirmation, errors and refresh. Offer/accepted screenshots were inspected. Client HTTP URLs contained no raw tokens, and local/session storage remained empty.
+- Migration test created a fresh isolated schema through migrations 001–004, inserted historical records, applied 005 and verified preserved originals, numbers, revisions and the offer pointer. The test rolled back its isolated schema. The local development database also upgraded through 005; two existing baselines and one request retained all original fields. It had no estimates/offers/decisions before this upgrade; historical estimate compatibility was exercised in the isolated migration fixture.
+- `npm run test:runtime`: eight checks passed after actual production application restarts, including preserved client acceptance, frozen offer and amendment, billing/history, original analysis/revision/approval/audit, safe missing-AI/auth behavior and database-outage errors.
+- `npm run test:live-browser`: 1 passed in 1.9 minutes using the configured Featherless `Qwen/Qwen3.8-27B` model and synthetic records in the isolated test database. The original request produced MODIFICATION, NEW_FEATURE and IN_SCOPE tasks. The UI saved revision 2 with rate INR 1,500/hour, fixed charge INR 500 and explicit eight-page/account terms; approved, generated and accepted the exact offer; reloaded the client result; verified accepted billing; then a second real analysis retrieved the accepted amendment and classified the eight-page request IN_SCOPE. This is a workflow check, not a fresh run of the 25-case live evaluation.
+- Configured local credential values were absent from all 147 nonignored repository files scanned before commit; raw environment values and verification databases/screenshots remain ignored. This check is not a general secret-detection guarantee.
+
+The initial browser run exposed two project-list waits exceeding the old five-second assertion deadline and one allowlist assertion that matched the word “reviewed” in legitimate client agreement text. The wait is now 15 seconds and the privacy assertion checks the internal JSON key specifically; the full final suite passed without retries.
+
+Limitations: token possession grants access, not verified client identity. Links are shared manually; once the raw link is lost, access must be rotated. Stale scope requires a new request/analysis. Project Memory browsing and chat remain later milestones. Existing Next.js Gzip listener warnings and a Prisma/pg busy-query deprecation warning appeared during successful tests; no dependency upgrade or deployment was performed in this milestone.

@@ -2,7 +2,8 @@ import { calculatePricing } from "../../src/lib/pricing";
 import { test, expect } from '@playwright/test';
 import pg from 'pg';
 import { randomUUID } from 'node:crypto';
-test('real Featherless analysis is saved and visible with valid evidence on desktop and mobile',async({page})=>{
+test('real Featherless analysis, review, client acceptance and subsequent agreed scope persist',async({page,browser})=>{
+  test.setTimeout(300000);
   const pool=new pg.Pool({connectionString:process.env.DATABASE_URL});
   try { await pool.query('DELETE FROM "LoginThrottle"'); } finally { await pool.end(); }
   const origin='http://localhost:3300';
@@ -28,6 +29,16 @@ test('real Featherless analysis is saved and visible with valid evidence on desk
   await page.getByLabel('Hourly rate (INR)',{exact:true}).fill('1500');
   await page.getByLabel('Fixed additional charge (INR)',{exact:true}).fill('500');
   await page.getByLabel('Additional charge reason (client-facing)',{exact:true}).fill('One-time configuration requested for this change.');
+  let clause = 0;
+  for (const task of estimate.analysis.tasks as { title: string; classification: string }[]) {
+    if (task.classification === 'IN_SCOPE') continue;
+    clause++;
+    await page.getByRole('button',{name:'Add agreement term',exact:true}).click();
+    await page.getByLabel(`Agreement term ${clause} text`,{exact:true}).fill(task.classification === 'MODIFICATION' ? 'The website now includes exactly eight responsive pages. The agreed contact form remains included.' : 'Customer accounts, login and password reset are now included in the agreed website.');
+    await page.getByLabel(`Term ${clause} applies to ${task.title}`,{exact:true}).check();
+    if(task.classification === 'MODIFICATION') await page.getByLabel(`Term ${clause} changes baseline clause B1`,{exact:true}).check();
+    if(task.classification === 'NEW_FEATURE') await page.getByLabel(`Term ${clause} changes baseline clause B3`,{exact:true}).check();
+  }
   const reviewedResponse=page.waitForResponse(r=>r.url().endsWith('/review')&&r.request().method()==='PUT');
   await page.getByRole('button',{name:'Save review',exact:true}).click();
   const reviewed=await reviewedResponse;expect(reviewed.status()).toBe(200);
@@ -39,5 +50,21 @@ test('real Featherless analysis is saved and visible with valid evidence on desk
   await page.reload();await expect(page.getByRole('heading',{name:'Human-approved · Revision 2',exact:true})).toBeVisible();
   for(const width of [1440,390]){await page.setViewportSize({width,height:width===1440?1000:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.local/live-browser-results/live-review-${width}.png`,fullPage:true});}
   console.log(`LIVE REVIEW PASS: saved revision 2, exact calculated prices, internal approval and reload verified.`);
+  const generatedResponse=page.waitForResponse(r=>r.url().endsWith('/proposal')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Generate client offer',exact:true}).click();
+  const generated=await generatedResponse;expect(generated.status()).toBe(200);const offered=await generated.json();
+  const client=await browser.newContext({viewport:{width:390,height:844}}),clientPage=await client.newPage();
+  try {
+    await clientPage.goto(offered.link);
+    await clientPage.getByRole('checkbox').check();await clientPage.getByRole('button',{name:'Accept offer',exact:true}).click();
+    await expect(clientPage.getByRole('heading',{name:'Offer accepted',exact:true})).toBeVisible();await clientPage.reload();await expect(clientPage.getByRole('heading',{name:'Offer accepted',exact:true})).toBeVisible();
+    await clientPage.screenshot({path:'.local/live-browser-results/live-client-accepted-390.png',fullPage:true});
+  } finally { await client.close(); }
+  const history=await page.request.get(`/api/projects/${estimate.projectId}/history`);expect(history.status()).toBe(200);expect((await history.json()).history.summary.acceptedAdditionalPaise.likely).toBe(String(reviewedEstimate.calculated.totalChargePaise.likely));
+  const followup=await page.request.post(`/api/projects/${estimate.projectId}/requests`,{headers:{Origin:origin},data:{text:'Build the eight responsive website pages exactly as now agreed.',hourlyRatePaise:150000}});expect(followup.status()).toBe(201);
+  const nextId=(await followup.json()).request.id;
+  const future=await page.request.post(`/api/requests/${nextId}/analyze`,{headers:{Origin:origin},data:{idempotencyKey:randomUUID()},timeout:125000});expect(future.status()).toBe(200);
+  const futureEstimate=(await future.json()).estimate;expect(futureEstimate.sources.some((s:{sourceType:string})=>s.sourceType==='accepted_change_clause')).toBe(true);expect(futureEstimate.analysis.tasks.every((t:{classification:string})=>t.classification==='IN_SCOPE')).toBe(true);
+  console.log('LIVE CLIENT PASS: exact offer accepted, billing persisted, and subsequent real analysis classified the amended eight-page agreement IN_SCOPE.');
   console.log(`LIVE PASS: ${estimate.analysis.tasks.length} tasks; categories ${[...categories].join(', ')}; model ${estimate.provenance.model}; saved estimate ${estimate.id}`);
 });

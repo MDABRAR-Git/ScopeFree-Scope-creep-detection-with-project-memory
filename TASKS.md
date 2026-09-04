@@ -1,5 +1,7 @@
 # Implementation checklist — 24 hours, four members
 
+> Milestone 5 implementation amendment (September 4, 2026): the user requested implementation of `docs/milestone-5.md`. Its client intake, explicit saved agreement terms, offer history, atomic acceptance/decline and pending-offer correction flow supersede conflicting older milestone text. A revoked offer requires a new saved revision and approval before replacement. Preserve the Milestone 4 pricing contract and the `abrar-dev`-only branch/push instruction; no deployment.
+
 > Milestone 4 user amendment (September 4, 2026): `docs/milestone-4.md` supersedes conflicting older text below. Use IN_SCOPE / MODIFICATION / NEW_FEATURE / UNCERTAIN in new inputs and UI while preserving immutable historical originals. Retain minimum/likely/maximum ranges. Permit one optional fixed additional charge per request with a required client-facing reason, added once per scenario. Include Request History, Additional Requests and stored billing summaries. Client submission/acceptance remains Milestone 5; edits to a shared pending offer must invalidate it and require reapproval. Latest branch instruction (September 4, 2026): complete Milestone 4 and all future work directly on `abrar-dev`, test, commit and push only to `origin/abrar-dev`. Do not create or push separate milestone/feature branches. This supersedes earlier branch instructions; no deployment.
 
 SPEC.md is authoritative. Check boxes only after verifying the exit condition. This is an implementation plan, not evidence of completed work.

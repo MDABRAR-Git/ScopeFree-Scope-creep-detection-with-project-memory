@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { baselineInput } from "../fixtures/intake-documents";
 import type { ReviewDraft } from "../../src/lib/pricing";
+import { testAgreement } from "../fixtures/agreement";
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const origin = "http://localhost:3100", headers = { Origin: origin };
 test.beforeEach(async () => { await pool.query('DELETE FROM "LoginThrottle"'); });
@@ -16,7 +17,7 @@ async function setup(request: APIRequestContext) {
   return { projectId, requestId: saved.id, estimate: (await response.json()).estimate };
 }
 async function save(request: APIRequestContext, id: string, revision: number, draft: ReviewDraft, editReason = '') {
-  return request.put(`/api/estimates/${id}/review`, { headers, data: { expectedRevision: revision, draft, editReason } });
+  return request.put(`/api/estimates/${id}/review`, { headers, data: { expectedRevision: revision, draft, agreement: testAgreement(draft), editReason } });
 }
 async function approve(request: APIRequestContext, id: string, revision: number) {
   return request.post(`/api/estimates/${id}/approve`, { headers, data: { expectedRevision: revision, reviewed: true } });
@@ -87,15 +88,16 @@ test('uncertainty blocks approval; resolving to IN_SCOPE allows zero-price appro
 
 test('approval is idempotent, reopening preserves audit, proposal and stale scope guard changes', async ({ request }) => {
   const { estimate, projectId } = await setup(request);
-  const first = await approve(request, estimate.id, 1); expect(first.status()).toBe(200);
+  await save(request, estimate.id, 1, estimate.draft);
+  const first = await approve(request, estimate.id, 2); expect(first.status()).toBe(200);
   const saved = (await first.json()).estimate;
-  expect(saved.approvedRevisionId).toBe(saved.revisions[0].id);
-  expect((await approve(request, estimate.id, 1)).status()).toBe(200);
-  expect((await save(request, estimate.id, 1, saved.draft)).status()).toBe(409);
+  expect(saved.approvedRevisionId).toBe(saved.revisions[1].id);
+  expect((await approve(request, estimate.id, 2)).status()).toBe(200);
+  expect((await save(request, estimate.id, 2, saved.draft)).status()).toBe(409);
   expect((await pool.query('SELECT count(*)::int n FROM "AuditEvent" WHERE "entityId"=$1 AND "action"=\'approved\'', [estimate.id])).rows[0].n).toBe(1);
-  expect((await reopen(request, estimate.id, 1)).status()).toBe(200);
+  expect((await reopen(request, estimate.id, 2)).status()).toBe(200);
   await pool.query('UPDATE "Project" SET "scopeRevision"="scopeRevision"+1 WHERE "id"=$1', [projectId]);
-  const stale = await approve(request, estimate.id, 1); expect(stale.status()).toBe(409); expect((await stale.json()).error.code).toBe('BASELINE_CHANGED');
+  const stale = await approve(request, estimate.id, 2); expect(stale.status()).toBe(409); expect((await stale.json()).error.code).toBe('BASELINE_CHANGED');
   const other = await setup(request);
   await expect(pool.query('UPDATE "Estimate" SET "status"=\'APPROVED\',"approvedRevisionId"=$1 WHERE "id"=$2', [other.estimate.revisions[0].id, estimate.id])).rejects.toMatchObject({ code: '23514' });
   await pool.query('INSERT INTO "Proposal" ("id","projectId","estimateId","approvedRevisionId","snapshotJson","basedOnScopeRevision","expiresAt") VALUES ($1,$2,$3,$4,$5,0,NOW()+INTERVAL \'1 day\')', [randomUUID(), projectId, estimate.id, estimate.revisions[0].id, JSON.stringify(estimate.revisions[0].snapshot)]);
@@ -104,15 +106,16 @@ test('approval is idempotent, reopening preserves audit, proposal and stale scop
 
 test('audit failures roll back saves and approvals atomically', async ({ request }) => {
   const { estimate, projectId } = await setup(request);
+  await save(request, estimate.id, 1, estimate.draft);
   await pool.query(`CREATE FUNCTION test_review_audit_failure() RETURNS trigger AS $$ BEGIN IF NEW."projectId"::text='${projectId}' AND NEW."action" IN ('review_saved','approved') THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END; $$ LANGUAGE plpgsql; CREATE TRIGGER test_review_audit_failure BEFORE INSERT ON "AuditEvent" FOR EACH ROW EXECUTE FUNCTION test_review_audit_failure();`);
   try {
-    expect((await save(request, estimate.id, 1, estimate.draft)).status()).toBe(503);
-    expect((await approve(request, estimate.id, 1)).status()).toBe(503);
+    expect((await save(request, estimate.id, 2, estimate.draft)).status()).toBe(503);
+    expect((await approve(request, estimate.id, 2)).status()).toBe(503);
     const row = (await pool.query('SELECT "currentRevision","status","approvedRevisionId" FROM "Estimate" WHERE "id"=$1', [estimate.id])).rows[0];
-    expect(row).toEqual({ currentRevision: 1, status: 'REVIEW_REQUIRED', approvedRevisionId: null });
-    expect((await pool.query('SELECT count(*)::int n FROM "EstimateRevision" WHERE "estimateId"=$1', [estimate.id])).rows[0].n).toBe(1);
+    expect(row).toEqual({ currentRevision: 2, status: 'REVIEW_REQUIRED', approvedRevisionId: null });
+    expect((await pool.query('SELECT count(*)::int n FROM "EstimateRevision" WHERE "estimateId"=$1', [estimate.id])).rows[0].n).toBe(2);
   } finally { await pool.query('DROP TRIGGER test_review_audit_failure ON "AuditEvent"; DROP FUNCTION test_review_audit_failure();'); }
-  expect((await save(request, estimate.id, 1, estimate.draft)).status()).toBe(200);
+  expect((await save(request, estimate.id, 2, estimate.draft)).status()).toBe(200);
 });
 
 test('legacy originals stay unchanged and gain a priced review only on explicit save', async ({ request }) => {
@@ -165,8 +168,7 @@ test('history excludes unresolved and declined billing and rejects foreign propo
   expect(history.summary).toMatchObject({ totalRequests: 2, additionalRequests: 1, acceptedAdditionalPaise: { minimum: '0', likely: '0', maximum: '0' }, pendingAdditionalPaise: { minimum: '0', likely: '0', maximum: '0' } });
   expect(history.rows[0].clientAcceptance).toBe('DECLINED'); expect(history.rows[1].additional).toBe(false);
   const otherId = (await (await request.post('/api/projects', { headers, data: { name: 'Other scope' } })).json()).project.id;
-  await pool.query('UPDATE "Proposal" SET "projectId"=$1 WHERE "id"=$2', [otherId, p]);
-  expect((await request.get(`/api/projects/${projectId}/history`)).status()).toBe(422);
+  await expect(pool.query('UPDATE "Proposal" SET "projectId"=$1 WHERE "id"=$2', [otherId, p])).rejects.toMatchObject({ code: '23514' });
 });
 
 test('pending billing excludes unreviewed, expired, revoked and stale offers', async ({ request }) => {
@@ -181,10 +183,10 @@ test('pending billing excludes unreviewed, expired, revoked and stale offers', a
   expect((await history()).summary.pendingAdditionalPaise.likely).toBe('200000');
   await pool.query('UPDATE "Proposal" SET "expiresAt"=NOW()-INTERVAL \'1 second\' WHERE "id"=$1', [p]);
   expect((await history()).summary.pendingAdditionalPaise.likely).toBe('0');
-  await pool.query('UPDATE "Proposal" SET "expiresAt"=NOW()+INTERVAL \'1 day\',"status"=\'REVOKED\' WHERE "id"=$1', [p]);
-  expect((await history()).summary.pendingAdditionalPaise.likely).toBe('0');
-  await pool.query('UPDATE "Proposal" SET "status"=\'PENDING\' WHERE "id"=$1', [p]);
+  await pool.query('UPDATE "Proposal" SET "expiresAt"=NOW()+INTERVAL \'1 day\' WHERE "id"=$1', [p]);
   await pool.query('UPDATE "Project" SET "scopeRevision"="scopeRevision"+1 WHERE "id"=$1', [projectId]);
+  expect((await history()).summary.pendingAdditionalPaise.likely).toBe('0');
+  await pool.query('UPDATE "Proposal" SET "status"=\'REVOKED\',"revokedAt"=NOW() WHERE "id"=$1', [p]);
   expect((await history()).summary.pendingAdditionalPaise.likely).toBe('0');
 });
 
@@ -207,6 +209,9 @@ test('desktop/mobile review recalculates, validates, saves, approves, reopens an
     await expect(page.getByRole('alert').filter({hasText:'highlighted inputs'})).toBeVisible();
     await expect(page.getByRole('button', { name: 'Approve estimate', exact: true })).toBeDisabled();
     await page.getByLabel('Additional charge reason (client-facing)', { exact: true }).fill('Additional service configuration.');
+    await page.getByRole('button', { name: 'Add agreement term', exact: true }).click();
+    await page.getByLabel('Agreement term 1 text', { exact: true }).fill('The website now includes six responsive pages, retaining the existing contact form.');
+    await page.getByLabel('Term 1 changes baseline clause B1', { exact: true }).check();
     await expect(page.getByRole('complementary', { name: 'Analysis summary' })).toContainText('₹6,500.00');
     await page.route('**/api/estimates/*/review', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'DATABASE_ERROR', message: 'Unable to save this review. Please retry.', retryable: true } }) }), { times: 1 });
     await page.getByRole('button', { name: 'Save review', exact: true }).press('Enter');

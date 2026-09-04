@@ -26,6 +26,6 @@ it("rejects malformed, foreign-referencing and cross-project replacement records
 it("rejects missing or unusable baselines, missing rates and stale requests before generation", async () => {
   const missing = fixture(); Object.assign(missing.request.project, { baseline: null }); await expect(loadAnalysisInput(missing.tx, p)).rejects.toMatchObject({ code: "BASELINE_REQUIRED" });
   const empty = fixture(); empty.request.project.baseline.clausesJson.clauses = []; await expect(loadAnalysisInput(empty.tx, p)).rejects.toMatchObject({ code: "BASELINE_INVALID" });
-  const rate = fixture(); Object.assign(rate.request, { hourlyRatePaise: null }); await expect(loadAnalysisInput(rate.tx, p)).rejects.toMatchObject({ code: "BASELINE_INVALID" });
+  const rate = fixture(); Object.assign(rate.request, { hourlyRatePaise: null }); await expect(loadAnalysisInput(rate.tx, p)).rejects.toMatchObject({ code: "RATE_REQUIRED" });
   const stale = fixture(); stale.request.project.scopeRevision = 2; await expect(loadAnalysisInput(stale.tx, p)).rejects.toMatchObject({ code: "BASELINE_CHANGED" });
 });
