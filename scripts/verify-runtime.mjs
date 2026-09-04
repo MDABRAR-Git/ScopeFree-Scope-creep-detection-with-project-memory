@@ -44,7 +44,12 @@ try {
   const submitted = await post(`/api/projects/${projectId}/requests`, { text: 'Add an additional portfolio page.', hourlyRatePaise: 123456 }, cookie); assert.equal(submitted.status, 201);
   const savedRequest = (await submitted.json()).request;
   const analyzed = await post(`/api/requests/${savedRequest.id}/analyze`, { idempotencyKey: randomUUID() }, cookie); assert.equal(analyzed.status, 200);
-  const savedEstimate = (await analyzed.json()).estimate;
+  let savedEstimate = (await analyzed.json()).estimate;
+  const reviewDraft = { ...savedEstimate.draft, hourlyRatePaise: 150000, additionalChargePaise: 50000, additionalChargeReason: "One-time configuration." };
+  const reviewed = await fetch(`${origin}/api/estimates/${savedEstimate.id}/review`, { method: "PUT", headers: { Origin: origin, Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ expectedRevision: 1, draft: reviewDraft, editReason: "Reviewed rate and fixed request charge." }) }); assert.equal(reviewed.status, 200);
+  const approved = await post(`/api/estimates/${savedEstimate.id}/approve`, { expectedRevision: 2, reviewed: true }, cookie); assert.equal(approved.status, 200); savedEstimate = (await approved.json()).estimate;
+  const historyBefore = await fetch(`${origin}/api/projects/${projectId}/history`, { headers: { Cookie: cookie } }); assert.equal(historyBefore.status, 200);
+  const savedHistory = (await historyBefore.json()).history;
   savedRequest.estimate = { id: savedEstimate.id };
   await stop(); await start();
   const read = await fetch(`${origin}/api/projects/${projectId}`, { headers: { Cookie: cookie } }); assert.equal(read.status, 200); assert.equal((await read.json()).project.name, 'Restart verification');
@@ -53,7 +58,12 @@ try {
   const requestsAfter = await fetch(`${origin}/api/projects/${projectId}/requests`, { headers: { Cookie: cookie } }); assert.equal(requestsAfter.status, 200); assert.deepEqual((await requestsAfter.json()).requests, [savedRequest]);
   console.log('PASS: immutable baseline, confirmation metadata, request and exact INR rate survive a production application restart.');
   const analysisAfter = await fetch(`${origin}/api/estimates/${savedEstimate.id}`, { headers: { Cookie: cookie } }); assert.equal(analysisAfter.status, 200); assert.deepEqual((await analysisAfter.json()).estimate, savedEstimate);
-  console.log('PASS: analysis original, pinned sources, first revision and provenance persist after a production restart (test-only provider).');
+  assert.equal(savedEstimate.status, 'APPROVED'); assert.equal(savedEstimate.currentRevision, 2);
+  const historyAfter = await fetch(`${origin}/api/projects/${projectId}/history`, { headers: { Cookie: cookie } }); assert.equal(historyAfter.status, 200); assert.deepEqual((await historyAfter.json()).history, savedHistory);
+  assert.equal(savedHistory.summary.additionalRequests, 1);
+  assert.equal(savedHistory.summary.pendingAdditionalPaise.likely, String(savedEstimate.calculated.totalChargePaise.likely));
+  console.log('PASS: request numbers, history, additional-request counts and saved billing totals persist after restart.');
+  console.log('PASS: analysis original, pinned sources, human revision, pricing, approval and audit history persist after a production restart (test-only provider).');
   await stop(); await start({ AI_API_KEY: '' });
   const anotherRequest = await post(`/api/projects/${projectId}/requests`, { text: 'Add a second additional page.', hourlyRatePaise: 100000 }, cookie);
   const anotherId = (await anotherRequest.json()).request.id;

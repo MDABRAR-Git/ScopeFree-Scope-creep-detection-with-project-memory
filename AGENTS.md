@@ -1,5 +1,7 @@
 # Coding-agent instructions — standalone Scope Change Estimator
 
+> Milestone 4 user amendment (September 4, 2026): `docs/milestone-4.md` supersedes conflicting older text below. Use IN_SCOPE / MODIFICATION / NEW_FEATURE / UNCERTAIN in new inputs and UI while preserving immutable historical originals. Retain minimum/likely/maximum ranges. Permit one optional fixed additional charge per request with a required client-facing reason, added once per scenario. Include Request History, Additional Requests and stored billing summaries. Client submission/acceptance remains Milestone 5; edits to a shared pending offer must invalidate it and require reapproval. Test, commit and push milestone-4 to origin/milestone-4; no deployment.
+
 ## Source of truth
 Read SPEC.md and TASKS.md before implementing. Follow the latest explicit user instructions if they supersede these files. This handoff is for a new standalone repository. Do not import the main Memovix portal, reuse its database/session assumptions, or modify that portal to implement this MVP. If working in a handoff folder within the old repository, first move/copy this pack to the user-selected new project folder; do not silently scaffold into the old project root.
 

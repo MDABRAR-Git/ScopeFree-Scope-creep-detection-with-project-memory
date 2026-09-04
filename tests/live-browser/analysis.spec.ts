@@ -1,3 +1,4 @@
+import { calculatePricing } from "../../src/lib/pricing";
 import { test, expect } from '@playwright/test';
 import pg from 'pg';
 import { randomUUID } from 'node:crypto';
@@ -16,11 +17,27 @@ test('real Featherless analysis is saved and visible with valid evidence on desk
   await page.getByRole('button',{name:'Analyze Request',exact:true}).click();
   const response=await responsePromise;const body=await response.json();expect(response.status(),body.error?.code??'analysis response').toBe(200);
   const estimate=body.estimate;expect(estimate.provenance.provider).toBe('featherless');expect(estimate.provenance.model).toBeTruthy();
-  const categories=new Set(estimate.analysis.tasks.map((t:{classification:string})=>t.classification));expect(categories.has('covered')).toBe(true);expect(categories.has('out_of_scope')).toBe(true);expect(categories.has('modifies_existing')).toBe(true);
+  const categories=new Set(estimate.analysis.tasks.map((t:{classification:string})=>t.classification));expect(categories.has('IN_SCOPE')).toBe(true);expect(categories.has('NEW_FEATURE')).toBe(true);expect(categories.has('MODIFICATION')).toBe(true);
   await expect(page.getByRole('heading',{name:'Scope analysis',exact:true})).toBeVisible();await page.reload();await expect(page.getByRole('heading',{name:'Scope analysis',exact:true})).toBeVisible();
   for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){await page.setViewportSize(viewport);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.local/live-browser-results/live-analysis-${viewport.width}.png`,fullPage:true});}
   await page.getByRole('link',{name:/Original baseline ·/}).first().click();await expect(page).toHaveURL(/#source-/);
   // Read through the authenticated browser request context so no raw cookie/token is recorded.
   const saved=await page.request.get(`/api/estimates/${estimate.id}`,{headers:{Origin:origin}});expect(saved.status()).toBe(200);expect((await saved.json()).estimate.analysis).toEqual(estimate.analysis);
+  await page.goto(`/projects/${estimate.projectId}/estimates/${estimate.id}`);
+  await page.getByRole('button',{name:'Edit review',exact:true}).click();
+  await page.getByLabel('Hourly rate (INR)',{exact:true}).fill('1500');
+  await page.getByLabel('Fixed additional charge (INR)',{exact:true}).fill('500');
+  await page.getByLabel('Additional charge reason (client-facing)',{exact:true}).fill('One-time configuration requested for this change.');
+  const reviewedResponse=page.waitForResponse(r=>r.url().endsWith('/review')&&r.request().method()==='PUT');
+  await page.getByRole('button',{name:'Save review',exact:true}).click();
+  const reviewed=await reviewedResponse;expect(reviewed.status()).toBe(200);
+  const reviewedEstimate=(await reviewed.json()).estimate;
+  expect(reviewedEstimate.calculated).toEqual(calculatePricing({...estimate.draft,hourlyRatePaise:150000,additionalChargePaise:50000,additionalChargeReason:'One-time configuration requested for this change.'}));
+  await page.getByLabel(/I have reviewed the scope, evidence, assumptions, hours and price/).check();
+  await page.getByRole('button',{name:'Approve estimate',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Human-approved · Revision 2',exact:true})).toBeVisible();
+  await page.reload();await expect(page.getByRole('heading',{name:'Human-approved · Revision 2',exact:true})).toBeVisible();
+  for(const width of [1440,390]){await page.setViewportSize({width,height:width===1440?1000:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.local/live-browser-results/live-review-${width}.png`,fullPage:true});}
+  console.log(`LIVE REVIEW PASS: saved revision 2, exact calculated prices, internal approval and reload verified.`);
   console.log(`LIVE PASS: ${estimate.analysis.tasks.length} tasks; categories ${[...categories].join(', ')}; model ${estimate.provenance.model}; saved estimate ${estimate.id}`);
 });

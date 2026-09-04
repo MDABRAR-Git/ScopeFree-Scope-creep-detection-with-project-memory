@@ -15,16 +15,16 @@ export const pinnedInputSchema = z.strictObject({
   sources: z.array(sourceSchema).min(1).max(1000),
 });
 export type PinnedInput = z.infer<typeof pinnedInputSchema>;
-export const classificationLabels = { covered: "Covered", modifies_existing: "Modifies existing", out_of_scope: "Out of scope", uncertain: "Uncertain" } as const;
+export const classificationLabels = { IN_SCOPE: "IN_SCOPE", MODIFICATION: "MODIFICATION", NEW_FEATURE: "NEW_FEATURE", UNCERTAIN: "UNCERTAIN" } as const;
 export function overallClassification(analysis: AnalysisOutput) {
-  return (["uncertain", "out_of_scope", "modifies_existing", "covered"] as const).find(value => analysis.tasks.some(t => t.classification === value))!;
+  return (["UNCERTAIN", "NEW_FEATURE", "MODIFICATION", "IN_SCOPE"] as const).find(value => analysis.tasks.some(t => t.classification === value))!;
 }
 export function additionalHours(analysis: AnalysisOutput) {
   const sums = { minimum: 0, likely: 0, maximum: 0 };
-  for (const task of analysis.tasks) if (["modifies_existing", "out_of_scope"].includes(task.classification)) {
+  for (const task of analysis.tasks) if (["MODIFICATION", "NEW_FEATURE"].includes(task.classification)) {
     for (const key of ["minimum", "likely", "maximum"] as const) sums[key] += task.estimatedHours[key] * 4;
   }
-  return { minimum: sums.minimum / 4, likely: sums.likely / 4, maximum: sums.maximum / 4, provisional: analysis.tasks.some(t => t.classification === "uncertain") };
+  return { minimum: sums.minimum / 4, likely: sums.likely / 4, maximum: sums.maximum / 4, provisional: analysis.tasks.some(t => t.classification === "UNCERTAIN") };
 }
 export function validateAnalysis(value: unknown, sources: ScopeSource[]): AnalysisOutput {
   const analysis = analysisOutputSchema.parse(value);
@@ -36,9 +36,9 @@ export function validateAnalysis(value: unknown, sources: ScopeSource[]): Analys
     }
     const matched = task.matchedScopeClause;
     if (matched && (!index.has(`${matched.sourceType}:${matched.sourceId}`) || !task.sourceEvidence.some(e => e.sourceId === matched.sourceId && e.sourceType === matched.sourceType))) throw new Error("The matched clause needs an exact citation to that supplied source.");
-    if (["covered", "modifies_existing"].includes(task.classification) && !matched) throw new Error("Covered or modified work requires a matching agreed clause; otherwise classify it uncertain.");
-    if (task.classification === "covered" && matched?.relation !== "inclusion") throw new Error("Covered work must match an inclusion.");
-    if (task.classification === "uncertain" && !task.missingInformation.length) throw new Error("Uncertain work needs a specific question about missing information.");
+    if (["IN_SCOPE", "MODIFICATION"].includes(task.classification) && !matched) throw new Error("Covered or modified work requires a matching agreed clause; otherwise classify it UNCERTAIN.");
+    if (task.classification === "IN_SCOPE" && matched?.relation !== "inclusion") throw new Error("Covered work must match an inclusion.");
+    if (task.classification === "UNCERTAIN" && !task.missingInformation.length) throw new Error("Uncertain work needs a specific question about missing information.");
   }
   return analysis;
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { projectIdSchema, revisionSnapshotSchema } from "@/lib/contracts";
+import { projectIdSchema } from "@/lib/contracts";
 import { additionalHours, analyzeInputSchema, overallClassification, pinnedInputSchema, validateAnalysis } from "@/lib/analysis";
 import { db, database } from "./db";
 import { AppError } from "./errors";
@@ -8,6 +8,8 @@ import { loadAnalysisInput } from "./scope";
 import { generateAnalysis, checkContext } from "./ai/analyze";
 import { scopeMessages } from "./ai/scope-prompt";
 import { createAIProvider } from "./ai/provider";
+import { draftFromRevision, pricedSnapshot, readRevision, readStoredAnalysis } from "@/lib/review";
+import { calculatePricing } from "@/lib/pricing";
 
 export async function getEstimate(estimateId: string) {
   if (!projectIdSchema.safeParse(estimateId).success) throw new AppError("NOT_FOUND", "Analysis not found.", 404);
@@ -15,13 +17,18 @@ export async function getEstimate(estimateId: string) {
   if (!estimate) throw new AppError("NOT_FOUND", "Analysis not found.", 404);
   const input = pinnedInputSchema.parse(estimate.originalInputJson);
   if (input.projectId !== estimate.request.projectId || input.requestId !== estimate.requestId) throw new AppError("INVALID_ESTIMATE", "The saved analysis has inconsistent source ownership.", 422);
-  const analysis = validateAnalysis(estimate.originalAiJson, input.sources);
+  const originalAnalysis = validateAnalysis(readStoredAnalysis(estimate.originalAiJson), input.sources);
+  const revisions = estimate.revisions.map(r => ({ id: r.id, revision: r.revision, snapshot: readRevision(r.snapshotJson), editReason: r.editReason, createdAt: r.createdAt.toISOString(), createdBy: r.createdBy }));
+  const current = revisions.find(r => r.revision === estimate.currentRevision);
+  if (!current) throw new AppError("INVALID_ESTIMATE", "The saved review is missing.", 422);
+  const analysis = validateAnalysis(current.snapshot.analysis, input.sources);
+  const approvalEvents = await database(() => db().auditEvent.findMany({ where: { projectId: input.projectId, entityId: estimate.id, entityType: "estimate", action: { in: ["approved", "review_reopened"] } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true, action: true, revisionId: true, createdAt: true } }));
   return { id: estimate.id, projectId: input.projectId, requestId: input.requestId, requestText: input.requestText,
-    analysis, sources: input.sources, scopeRevision: input.scopeRevision, hourlyRatePaise: input.hourlyRatePaise,
+    analysis, originalAnalysis, draft: draftFromRevision(current.snapshot), calculated: current.snapshot.calculated, legacyRevision: current.snapshot.legacy, approvedRevisionId: estimate.approvedRevisionId, sources: input.sources, scopeRevision: input.scopeRevision, hourlyRatePaise: input.hourlyRatePaise,
     overallClassification: overallClassification(analysis), additionalHours: additionalHours(analysis),
     status: estimate.status, currentRevision: estimate.currentRevision, createdAt: estimate.createdAt.toISOString(),
     provenance: { provider: estimate.provider, model: estimate.model, promptVersion: estimate.promptVersion },
-    revisions: estimate.revisions.map(r => ({ id: r.id, revision: r.revision, snapshot: revisionSnapshotSchema.parse(r.snapshotJson), createdAt: r.createdAt.toISOString(), createdBy: r.createdBy })),
+    revisions, approvalHistory: approvalEvents.map(event => ({ ...event, createdAt: event.createdAt.toISOString() })),
   };
 }
 export type SavedEstimate = Awaited<ReturnType<typeof getEstimate>>;
@@ -63,8 +70,9 @@ export async function analyzeRequest(requestId: string, body: unknown, sessionId
       if (!job || job.leaseId !== leaseId || job.expiresAt <= new Date()) throw new AppError("ANALYSIS_IN_PROGRESS", "This analysis attempt expired. Check the saved result or retry.", 409, true);
       const current = await loadAnalysisInput(tx, requestId);
       if (JSON.stringify(input) !== JSON.stringify(current)) throw new AppError("BASELINE_CHANGED", "Scope or request changed during analysis. Create a current-scope request.", 409);
-      const estimate = await tx.estimate.create({ data: { requestId, originalAiJson: result.analysis, originalInputJson: input, provider: result.provider, model: result.model, promptVersion: result.promptVersion, currentRevision: 1 } });
-      const revision = await tx.estimateRevision.create({ data: { estimateId: estimate.id, revision: 1, snapshotJson: { schemaVersion: 1, analysis: result.analysis, hourlyRatePaise: input.hourlyRatePaise }, createdBy: "ai" } });
+      const draft = { analysis: result.analysis, hourlyRatePaise: input.hourlyRatePaise, additionalChargePaise: 0, additionalChargeReason: "" };
+      const estimate = await tx.estimate.create({ data: { requestId, originalCalculatedJson: calculatePricing(draft), originalAiJson: result.analysis, originalInputJson: input, provider: result.provider, model: result.model, promptVersion: result.promptVersion, currentRevision: 1 } });
+      const revision = await tx.estimateRevision.create({ data: { estimateId: estimate.id, revision: 1, snapshotJson: pricedSnapshot(draft), createdBy: "ai" } });
       await tx.auditEvent.create({ data: { projectId: input.projectId, entityType: "estimate", entityId: estimate.id, action: "analyzed", actorType: "freelancer", revisionId: revision.id, metadataJson: { schemaVersion: 1, scopeRevision: input.scopeRevision, idempotencyKey, repaired: result.repaired, promptVersion: result.promptVersion } } });
       await tx.analysisJob.delete({ where: { requestId } });
       return estimate.id;

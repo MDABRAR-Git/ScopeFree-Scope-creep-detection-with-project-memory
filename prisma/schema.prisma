@@ -32,6 +32,8 @@ model Baseline {
 
 model ChangeRequest {
   id                   String           @id @default(uuid()) @db.Uuid
+  requestNumber        Int              @default(0)
+  summary              String           @default("") @db.VarChar(120)
   projectId            String           @db.Uuid
   project              Project          @relation(fields: [projectId], references: [id], onDelete: Restrict)
   text                 String
@@ -43,6 +45,7 @@ model ChangeRequest {
   estimate             Estimate?
   analysisJob          AnalysisJob?
   @@index([projectId, createdAt])
+  @@unique([projectId, requestNumber])
 }
 
 enum EstimateStatus {

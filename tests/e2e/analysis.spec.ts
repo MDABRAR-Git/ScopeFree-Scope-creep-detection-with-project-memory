@@ -56,11 +56,11 @@ test("analysis requires access and trusted origins; bodies cannot supply authori
 test("valid analysis saves originals, first revision and provenance once, with immutable database snapshots", async ({ request }) => {
   const { auth, requestId, projectId } = await setup(request); const key = randomUUID();
   const first = await analyze(request, requestId, auth, key); expect(first.status()).toBe(200); const saved = (await first.json()).estimate;
-  expect(saved).toMatchObject({ projectId, requestId, currentRevision: 1, status: "REVIEW_REQUIRED", overallClassification: "modifies_existing", provenance: { provider: "openai-compatible", model: "test-only-provider", promptVersion: "scope-v4" } });
+  expect(saved).toMatchObject({ projectId, requestId, currentRevision: 1, status: "REVIEW_REQUIRED", overallClassification: "MODIFICATION", provenance: { provider: "openai-compatible", model: "test-only-provider", promptVersion: "scope-v5" } });
   expect(saved.revisions).toHaveLength(1); expect(saved.analysis.tasks[0].sourceEvidence[0].quote).toBe(saved.sources[0].text);
   const again = await analyze(request, requestId, auth, key); expect((await again.json()).estimate).toEqual(saved);
   const freshKey = await analyze(request, requestId, auth); expect((await freshKey.json()).estimate.id).toBe(saved.id);
-  const row = (await pool.query('SELECT "originalCalculatedJson" FROM "Estimate" WHERE "id"=$1', [saved.id])).rows[0]; expect(row.originalCalculatedJson).toBeNull();
+  const row = (await pool.query('SELECT "originalCalculatedJson" FROM "Estimate" WHERE "id"=$1', [saved.id])).rows[0]; expect(row.originalCalculatedJson).toEqual(saved.calculated);
   for (const sql of ['UPDATE "Estimate" SET "originalAiJson"=\'{}\' WHERE "id"=$1', 'DELETE FROM "Estimate" WHERE "id"=$1']) await expect(pool.query(sql, [saved.id])).rejects.toMatchObject({ code: "23514" });
   await expect(pool.query('UPDATE "EstimateRevision" SET "snapshotJson"=\'{}\' WHERE "estimateId"=$1', [saved.id])).rejects.toMatchObject({ code: "23514" });
   expect((await pool.query('SELECT COUNT(*)::int n FROM "AuditEvent" WHERE "entityId"=$1 AND "action"=\'analyzed\'', [saved.id])).rows[0].n).toBe(1);

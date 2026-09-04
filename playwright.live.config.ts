@@ -8,7 +8,8 @@ if (!live.AI_API_KEY || !live.AI_MODEL) throw new Error('Live AI configuration i
 const env: Record<string,string> = { APP_ORIGIN: 'http://localhost:3300' };
 for (const [key,value] of Object.entries(live)) if (key.startsWith('AI_')) env[key] = value;
 export default defineConfig({
-  testDir:'./tests/live-browser', workers:1, retries:0, timeout:150000,
+  testDir:'./tests/live-browser', workers:1, retries:0, timeout:180000,
+  expect:{timeout:15000},
   outputDir:'.local/live-browser-results',
   use:{baseURL:'http://localhost:3300',trace:'off',screenshot:'only-on-failure'},
   projects:[{name:'chromium',use:{...devices['Desktop Chrome']}}],

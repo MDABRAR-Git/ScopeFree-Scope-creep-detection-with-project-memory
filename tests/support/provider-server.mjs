@@ -10,7 +10,7 @@ export function startTestProvider(port = 3199) {
     if(input.request.includes('[OUTAGE]')){res.writeHead(503).end('{}');return;}
     if(input.request.includes('[RATE]')){res.writeHead(429).end('{}');return;}
     const source=input.sources[0];
-    const task={id:'T1',title:'Additional project page',classification:'modifies_existing',matchedScopeClause:{sourceType:source.sourceType,sourceId:source.sourceId,relation:'limit'},sourceEvidence:[{sourceType:source.sourceType,sourceId:source.sourceId,quote:source.text}],estimatedHours:{minimum:1,likely:2,maximum:3},assumptions:['Client supplies the page content.'],complexity:'One static page using existing styles.',risks:['Content may need clarification.'],missingInformation:[],explanation:'The additional page increases the agreed page count.'};
+    const task={id:'T1',title:'Additional project page',classification:'MODIFICATION',matchedScopeClause:{sourceType:source.sourceType,sourceId:source.sourceId,relation:'limit'},sourceEvidence:[{sourceType:source.sourceType,sourceId:source.sourceId,quote:source.text}],estimatedHours:{minimum:1,likely:2,maximum:3},assumptions:['Client supplies the page content.'],complexity:'One static page using existing styles.',risks:['Content may need clarification.'],missingInformation:[],explanation:'The additional page increases the agreed page count.'};
     const bad = input.request.includes('[INVALID]') || (input.request.includes('[REPAIR]') && body.messages.length===2);
     const content=bad?'invalid JSON':JSON.stringify({schemaVersion:1,tasks:[task],explanation:'The request changes an agreed quantity.'});
     res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({model:'test-only-provider',choices:[{message:{content},finish_reason:'stop'}]}));

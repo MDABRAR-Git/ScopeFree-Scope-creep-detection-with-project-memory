@@ -1,5 +1,7 @@
 # Implementation checklist — 24 hours, four members
 
+> Milestone 4 user amendment (September 4, 2026): `docs/milestone-4.md` supersedes conflicting older text below. Use IN_SCOPE / MODIFICATION / NEW_FEATURE / UNCERTAIN in new inputs and UI while preserving immutable historical originals. Retain minimum/likely/maximum ranges. Permit one optional fixed additional charge per request with a required client-facing reason, added once per scenario. Include Request History, Additional Requests and stored billing summaries. Client submission/acceptance remains Milestone 5; edits to a shared pending offer must invalidate it and require reapproval. Test, commit and push milestone-4 to origin/milestone-4; no deployment.
+
 SPEC.md is authoritative. Check boxes only after verifying the exit condition. This is an implementation plan, not evidence of completed work.
 
 ## Ownership and parallel work

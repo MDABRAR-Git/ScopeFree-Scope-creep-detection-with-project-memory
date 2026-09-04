@@ -27,7 +27,7 @@ export async function generateAnalysis(input: PinnedInput, signal: AbortSignal, 
       return { analysis, provider: result.provider, model: result.model, promptVersion: SCOPE_PROMPT_VERSION, repaired: attempt === 1 };
     } catch {
       if (attempt === 1) throw new AppError("AI_OUTPUT_INVALID", "The AI response could not be validated after one repair attempt. No estimate was saved. Please retry.", 502, true);
-      messages.push({ role: "assistant", content: result.text }, { role: "user", content: "Your response failed JSON, schema, hour-range or citation validation. Return the complete corrected JSON, using only the exact supplied source IDs and quotes. Check every matched clause has evidence, covered work has zero hours and inclusion relation, and uncertain work includes a question. Do not add fields or omit requested tasks." });
+      messages.push({ role: "assistant", content: result.text }, { role: "user", content: "Your response failed JSON, schema, hour-range or citation validation. Return the complete corrected JSON, using only the exact supplied source IDs and quotes. Check every matched clause has evidence, IN_SCOPE work has zero hours and inclusion relation, and UNCERTAIN work includes a question. Do not add fields or omit requested tasks." });
     }
   }
   throw new AppError("AI_OUTPUT_INVALID", "No valid analysis was returned.", 502);

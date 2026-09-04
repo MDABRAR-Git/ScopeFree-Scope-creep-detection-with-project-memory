@@ -36,10 +36,10 @@ it("handles a failed post-save readback while asynchronous lease cleanup is stil
   mocks.client.mockReturnValue(client);
   mocks.database.mockImplementation((work: () => Promise<unknown>) => work());
   mocks.load.mockResolvedValue(input);
-  // Generation itself is outside this fault-injection test; the real provider is covered separately.
+  // Generation itself is outside this fault-injection test; the real provider is IN_SCOPE separately.
   const source = input.sources.find(s => s.clauseId === "B2")!;
   mocks.generate.mockResolvedValue({ analysis: { schemaVersion: 1, explanation: "The form is agreed.", tasks: [{
-    id: "T1", title: "Agreed contact form", classification: "covered",
+    id: "T1", title: "Agreed contact form", classification: "IN_SCOPE",
     matchedScopeClause: { sourceType: source.sourceType, sourceId: source.sourceId, relation: "inclusion" },
     sourceEvidence: [{ sourceType: source.sourceType, sourceId: source.sourceId, quote: source.text }],
     estimatedHours: { minimum: 0, likely: 0, maximum: 0 }, assumptions: [], complexity: "Low", risks: [], missingInformation: [], explanation: "The form is agreed.",
